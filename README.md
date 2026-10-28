@@ -1,21 +1,33 @@
-# Medieval Fantasy City Generator
+# World Map Generator OS
 
-This repository is a fork of the source code for [Medieval Fantasy City Generator by Watabou](https://watabou.itch.io/medieval-fantasy-city-generator/).
+A procedural Earth-style world-map and settlement-generation workspace based on the source structure of Watabou's Medieval Fantasy City Generator. The original city generator remains in the Haxe/OpenFL source tree; the new browser-based world-map editor is served as a lightweight static app.
 
-## GitHub Pages (HTML5)
+## Open the app
 
-A GitHub Actions workflow builds this Haxe/OpenFL project as an HTML5 release and deploys it to GitHub Pages when code is pushed to `master`. You can also start the workflow manually from **Actions → Build and deploy TownGeneratorOS to GitHub Pages → Run workflow**.
+- **GitHub Pages homepage:** once deployment succeeds, use the URL shown in [Settings → Pages](https://github.com/ArkansasIo/TownGeneratorOS/settings/pages).
+- **Source page:** [world-map.html](./world-map.html)
+- **World map data:** [Natural Earth land geometry](./Assets/world-land.geojson) and [country boundaries](./Assets/world-countries.geojson).
 
-### First-time Pages setup
+## World map features
 
-1. Open [Settings → Pages](https://github.com/ArkansasIo/TownGeneratorOS/settings/pages).
-2. Under **Build and deployment**, select **GitHub Actions** as the source.
-3. Open [Actions](https://github.com/ArkansasIo/TownGeneratorOS/actions/workflows/pages.yml) and run **Build and deploy TownGeneratorOS to GitHub Pages**, or push a commit to `master`.
-4. Wait for the build and deploy jobs to succeed. The published URL appears in the deployment job and in **Settings → Pages**.
+- Earth-style continent silhouettes loaded from GeoJSON.
+- Pan and zoom controls for the 2D canvas, including wheel zoom and drag navigation.
+- Seed field for repeatable procedural settlement generation.
+- Generate cities, towns, villages, ports, and fortified settlements.
+- Add settlements manually by double-clicking land; select, rename, or delete markers.
+- Choose terrain and political-border overlays.
+- Export world data to JSON and import a previously exported JSON world.
+- Responsive layout for desktop and mobile screens.
 
-The workflow builds `project.xml` using Haxe, Lime, OpenFL, and msignal, then publishes `Export/html5/bin`. The first run is the compatibility check; if the legacy source or dependencies fail to compile, the Actions log will show the failing step.
+The current editor is a prototype: continent outlines use a simplified equirectangular display, and settlement placement uses procedural point generation. It is not a navigable globe, and the settlement system is not yet connected to the original Haxe city-layout engine.
 
-## Build locally
+## GitHub Pages deployment
+
+The workflow [Deploy World Map Generator OS to GitHub Pages](https://github.com/ArkansasIo/TownGeneratorOS/actions/workflows/pages.yml) publishes `index.html`, `world-map.html`, and the GeoJSON assets. It runs on relevant pushes to `master` or can be started manually from **Actions → Deploy World Map Generator OS to GitHub Pages → Run workflow**.
+
+If this is the first deployment, open [Settings → Pages](https://github.com/ArkansasIo/TownGeneratorOS/settings/pages) and choose **GitHub Actions** as the source. The deployment is not considered live until the workflow's deploy job succeeds.
+
+## Build the original Haxe city generator
 
 Install Haxe and Haxelib, then run:
 
@@ -26,8 +38,6 @@ haxelib install msignal 1.2.5
 haxelib run lime build html5 -release
 ```
 
-The source currently lacks some later upstream features, including waterbodies and the options UI.
+## Attribution and licensing
 
-## Credits and licensing
-
-This project is based on Watabou's Medieval Fantasy City Generator. Review [LICENSE](LICENSE) before redistributing or publishing modified builds, and retain applicable attribution.
+This repository is a fork based on [Watabou's Medieval Fantasy City Generator](https://watabou.itch.io/medieval-fantasy-city-generator/). Natural Earth geometry is included for geographic outlines; consult the dataset's terms and the repository [LICENSE](./LICENSE) before redistributing. Preserve applicable upstream attribution.
