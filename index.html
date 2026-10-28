@@ -128,6 +128,7 @@ for(let i=0;i<blocks;i++){
 if(showLabels&&(zoom<7||city===selected)){ctx.fillStyle='#f4e5c1';ctx.font='bold '+Math.max(9,Math.min(15,11/zoom+5))+'px system-ui';ctx.textAlign='center';ctx.fillText(city.name,0,-radius-8);}
 ctx.restore();
 }
+}
 function draw(){const dpr=window.devicePixelRatio||1,rect=canvas.getBoundingClientRect();canvas.width=Math.round(rect.width*dpr);canvas.height=Math.round(rect.height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);const w=rect.width,h=rect.height;ctx.clearRect(0,0,w,h);
 ctx.fillStyle=$('terrain').value==='biomes'?'#102b32':'#0b2638';ctx.fillRect(0,0,w,h);
 ctx.save();ctx.translate(w/2+panX,h/2+panY);ctx.scale(zoom,zoom);ctx.translate(-w/2,-h/2);
