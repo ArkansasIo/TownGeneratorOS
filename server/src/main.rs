@@ -4,6 +4,7 @@ use sqlx::{mysql::MySqlPoolOptions, MySqlPool};
 use std::{env, net::SocketAddr};
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 mod physics;
+mod roads;
 use physics::{OrbitRequest, SurfaceGravityRequest};
 
 #[derive(Clone)]
@@ -29,6 +30,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/universe", get(universe_info))
         .route("/api/v1/physics/orbit", axum::routing::post(orbit_calculation))
         .route("/api/v1/physics/surface-gravity", axum::routing::post(surface_gravity_calculation))
+        .route("/api/v1/world/roads", axum::routing::post(generate_roads))
         .route("/api/v1/session", get(ws_upgrade))
         .with_state(state)
         .layer(CorsLayer::permissive())
@@ -88,6 +90,13 @@ async fn orbit_calculation(Json(input): Json<OrbitRequest>) -> impl IntoResponse
 async fn surface_gravity_calculation(Json(input): Json<SurfaceGravityRequest>) -> impl IntoResponse {
     match physics::surface_gravity(&input) {
         Ok(result) => (StatusCode::OK, Json(serde_json::json!({"model":"Newtonian spherical-body approximation","units":"SI","result":result}))),
+        Err(message) => (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error":message}))),
+    }
+}
+
+async fn generate_roads(Json(input): Json<roads::RoadNetworkRequest>) -> impl IntoResponse {
+    match roads::generate_road_network(input.seed, input.sites, input.max_local_distance) {
+        Ok(network) => (StatusCode::OK, Json(serde_json::json!({"algorithm":"deterministic_euclidean_backbone_v1","note":"Prototype graph only; terrain, rivers, walls, slope costs and pathfinding are not yet applied.","network":network}))),
         Err(message) => (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error":message}))),
     }
 }
