@@ -9,18 +9,26 @@
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}
 header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 20px;border-bottom:1px solid var(--line);background:#0b1925;flex-wrap:wrap}
 h1{font-size:19px;margin:0;letter-spacing:.04em}header p{margin:3px 0 0;color:var(--muted);font-size:12px}
-main{display:grid;grid-template-columns:270px minmax(0,1fr);min-height:calc(100vh - 66px)}
+.statusbar{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:1px;margin:0 12px 8px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden}.statusbar>div{background:#0d1b27;padding:9px 11px;min-width:0}.statusbar small,.statusbar strong,.statusbar span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.statusbar small{font-size:9px;letter-spacing:.1em;color:var(--muted)}.statusbar strong{font-size:13px;color:var(--ink);margin:4px 0}.statusbar span{font-size:10px;color:var(--muted)}main{display:grid;grid-template-columns:270px minmax(0,1fr);min-height:calc(100vh - 66px)}
 aside{padding:16px;border-right:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;gap:14px}
 section{border:1px solid var(--line);border-radius:8px;padding:12px}h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--accent);margin:0 0 10px}
 label{display:block;font-size:12px;color:var(--muted);margin:9px 0 4px}input,select,button{font:inherit;width:100%;border-radius:5px;border:1px solid #36566a;background:#0a1721;color:var(--ink);padding:8px}
 input[type=range]{padding:0;accent-color:var(--accent)}button{cursor:pointer;background:#173447;border-color:#42687a;font-weight:600}button:hover{background:#21485b}.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.check{display:flex;align-items:center;gap:8px}.check input{width:auto}
 #stats{color:var(--muted);font-size:12px;line-height:1.7}.maptools{display:flex;gap:6px;align-items:center}.maptools button{width:auto;min-width:42px;padding:6px 10px}.maptools span{color:var(--muted);font-size:12px;min-width:55px;text-align:center}.mapwrap{padding:12px;min-width:0;display:flex;flex-direction:column;gap:8px}#map{width:100%;height:calc(100vh - 112px);min-height:440px;display:block;border:1px solid var(--line);border-radius:8px;background:#0b2638;touch-action:manipulation}
 .legend{display:flex;gap:15px;flex-wrap:wrap;color:var(--muted);font-size:12px}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}.hint{color:var(--muted);font-size:12px}
-@media(max-width:780px){main{grid-template-columns:1fr}aside{border-right:0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}#map{height:65vh;min-height:360px}}
+@media(max-width:1000px){.statusbar{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:520px){.statusbar{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:780px){main{grid-template-columns:1fr}aside{border-right:0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}#map{height:65vh;min-height:360px}}
 </style>
 </head>
 <body>
 <header><div><h1>WORLD MAP GENERATOR OS</h1><p>Earth-style continents · regional borders · procedural settlements</p></div><div class="hint">Prototype module · deterministic seed-based generation</div></header>
+<div id="worldStatusBar" class="statusbar" aria-live="polite">
+<div><small>WORLD TIME</small><strong id="worldClock">08:00</strong><span id="dayNight">Day</span></div>
+<div><small>WEATHER</small><strong id="weatherValue">Clear</strong><span id="weatherDetail">Seasonal simulation</span></div>
+<div><small>POPULATION</small><strong id="populationValue">—</strong><span id="populationTrend">Settlement estimate</span></div>
+<div><small>RESOURCES</small><strong id="resourceValue">Gold 1,200 · Food 800</strong><span id="resourceDetail">Realm stockpiles</span></div>
+<div><small>BIOME / SUB-BIOME</small><strong id="biomeValue">Temperate</strong><span id="subBiomeValue">Mixed forest</span></div>
+<div><small>WORLD / TURN</small><strong id="worldTurnValue">Terra Nova · 1</strong><span id="worldSeason">Spring · simulation</span></div>
+</div>
 <main>
 <aside>
 <section><h2>World setup</h2>
@@ -28,7 +36,7 @@ input[type=range]{padding:0;accent-color:var(--accent)}button{cursor:pointer;bac
 <label for="seed">World seed</label><input id="seed" value="terra-001" maxlength="64">
 <label for="density">Settlement density <span id="densityValue">60</span>%</label><input id="density" type="range" min="10" max="100" value="60">
 <label for="borderMode">Political borders</label><select id="borderMode"><option value="countries">Countries + provinces</option><option value="countriesOnly">Countries only</option><option value="none">No political borders</option></select>
-<label for="terrain">Map overlay</label><select id="terrain"><option value="political">Political regions</option><option value="biomes">Biomes</option><option value="physical">Physical geography</option></select>
+<label for="terrain">Map overlay</label><select id="terrain"><option value="political">Political regions</option><option value="biomes">Biomes and sub-biomes</option><option value="physical">Physical geography</option><option value="weather">Weather simulation</option></select>
 <div class="row" style="margin-top:12px"><button id="generate">Generate world</button><button id="export">Export JSON</button></div>
 </section>
 <section><h2>Settlement generator</h2>
@@ -84,6 +92,7 @@ let geo=[];
 let settlements=[],regions=[],selected=null,seedText='terra-001',worldName='Terra Nova',serial=0;
 let zoom=1,panX=0,panY=0;
 let turn=1,realm={gold:1200,food:800,stability:65,military:120,trade:0};
+let worldMinutes=8*60;
 let ownedIds=new Set();
 function setZoom(next,anchorX=null,anchorY=null){const rect=canvas.getBoundingClientRect();const cx=anchorX??rect.width/2,cy=anchorY??rect.height/2;const old=zoom;zoom=Math.max(1,Math.min(18,next));panX=cx-(cx-panX)*(zoom/old);panY=cy-(cy-panY)*(zoom/old);$('zoomLabel').textContent=Math.round(zoom*100)+'%';draw()}
 function hash(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
@@ -129,13 +138,13 @@ if(showLabels&&(zoom<7||city===selected)){ctx.fillStyle='#f4e5c1';ctx.font='bold
 ctx.restore();
 }
 }
-function draw(){const dpr=window.devicePixelRatio||1,rect=canvas.getBoundingClientRect();canvas.width=Math.round(rect.width*dpr);canvas.height=Math.round(rect.height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);const w=rect.width,h=rect.height;ctx.clearRect(0,0,w,h);
+function draw(){updateStatusBar();const dpr=window.devicePixelRatio||1,rect=canvas.getBoundingClientRect();canvas.width=Math.round(rect.width*dpr);canvas.height=Math.round(rect.height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);const w=rect.width,h=rect.height;ctx.clearRect(0,0,w,h);
 ctx.fillStyle=$('terrain').value==='biomes'?'#102b32':'#0b2638';ctx.fillRect(0,0,w,h);
 ctx.save();ctx.translate(w/2+panX,h/2+panY);ctx.scale(zoom,zoom);ctx.translate(-w/2,-h/2);
 // latitude/longitude graticule
 ctx.strokeStyle='rgba(143,190,207,.15)';ctx.lineWidth=1;for(let x=0;x<=w;x+=w/12){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke()}for(let y=0;y<=h;y+=h/6){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}
 const sx=w/1000,sy=h/500;
-geo.forEach((g,idx)=>{ctx.beginPath();g.p.forEach((p,i)=>i?ctx.lineTo(p[0]*sx,p[1]*sy):ctx.moveTo(p[0]*sx,p[1]*sy));ctx.closePath();ctx.fillStyle=$('terrain').value==='biomes'?['#6f9a72','#799b62','#b1aa7d','#8eaa70','#799b62'][idx%5]:'#c7b88c';ctx.fill();ctx.strokeStyle='#e3d5aa';ctx.lineWidth=1.3;ctx.stroke()});
+geo.forEach((g,idx)=>{ctx.beginPath();g.p.forEach((p,i)=>i?ctx.lineTo(p[0]*sx,p[1]*sy):ctx.moveTo(p[0]*sx,p[1]*sy));ctx.closePath();ctx.fillStyle=$('terrain').value==='weather'?['#8295a6','#7796b5','#718c80','#b1a27e','#8794b5'][hash(seedText+'|wx|'+idx+Math.floor(worldMinutes/180))%5]:$('terrain').value==='biomes'?['#6f9a72','#799b62','#b1aa7d','#8eaa70','#799b62'][idx%5]:'#c7b88c';ctx.fill();ctx.strokeStyle='#e3d5aa';ctx.lineWidth=1.3;ctx.stroke()});
 if($('terrain').value!=='physical')regions.forEach((g,i)=>{if($('borderMode').value==='none')return;const x=g.x*sx,y=g.y*sy;ctx.beginPath();ctx.arc(x,y,Math.max(18,w*.035),0,Math.PI*2);ctx.strokeStyle=$('borderMode').value==='countriesOnly'?'rgba(244,220,155,.6)':'rgba(238,208,146,.38)';ctx.setLineDash($('borderMode').value==='countriesOnly'?[]:[4,4]);ctx.lineWidth=1;ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='rgba(8,19,29,.72)';ctx.font='10px system-ui';ctx.textAlign='center';ctx.fillText(g.name,x,y-7)});
 settlements.forEach(s=>{const x=s.x*sx,y=s.y*sy;const color=s.type==='city'?'#ffcf70':s.type==='town'?'#78d8c2':s.type==='village'?'#b8c9f2':'#f28b82';ctx.beginPath();ctx.arc(x,y,Math.max(1.4,(s.type==='city'?4.5:s.type==='town'?3.3:2.4)/Math.sqrt(zoom)),0,Math.PI*2);ctx.fillStyle=color;ctx.fill();ctx.strokeStyle='#08131d';ctx.lineWidth=1;ctx.stroke();if(s===selected){ctx.beginPath();ctx.arc(x,y,9,0,Math.PI*2);ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke()}});
 ctx.fillStyle='rgba(222,236,240,.75)';ctx.font='11px system-ui';ctx.textAlign='left';ctx.fillText(worldName+' · seed '+seedText,12,20);
@@ -145,7 +154,34 @@ ctx.restore();
 function newWorld(){turn=1;realm={gold:1200,food:800,stability:65,military:120,trade:0};ownedIds=new Set();worldName=$('worldName').value.trim()||'Unnamed World';seedText=$('seed').value.trim()||'world-001';serial=0;selected=null;settlements=[];const r=rng(hash(seedText));generateRegions(r);const base=+$('density').value;genSettlements(Math.round(190*base/60),'all');$('detail').textContent='World regenerated. Select a settlement marker to inspect its details.';updateStats();draw()}
 function updateRealm(){const el=$('realmStats');if(el)el.innerHTML='Turn: <b>'+turn+'</b><br>Gold: '+realm.gold.toLocaleString()+' · Food: '+realm.food.toLocaleString()+'<br>Militia: '+realm.military.toLocaleString()+' · Stability: '+realm.stability+'%<br>Owned settlements: '+ownedIds.size+' · Trade routes: '+realm.trade;}
 function logTurn(message){const el=$('turnLog');if(el)el.textContent='Turn '+turn+': '+message}
-function updateStats(){const counts={city:0,town:0,village:0,port:0,fort:0};settlements.forEach(s=>counts[s.type]=(counts[s.type]||0)+1);$('stats').innerHTML='<b>'+worldName+'</b><br>Seed: '+seedText+'<br>Continents / landmasses: '+geo.length+'<br>Regions: '+regions.length+'<br>Total settlements: '+settlements.length+'<br>Cities: '+counts.city+' · Towns: '+counts.town+'<br>Villages: '+counts.village+'<br>Ports: '+counts.port+' · Forts: '+counts.fort}
+function classifyBiome(s){
+ const lat=Math.abs(((s.y/500)*180)-90),n=hash(seedText+'|biome|'+s.id)%100;
+ if(lat>72)return {biome:'Polar',sub:'Tundra / ice cap'};
+ if(lat>58)return {biome:'Boreal',sub:n<50?'Taiga forest':'Muskeg / bog'};
+ if(lat>45)return {biome:'Temperate',sub:n<35?'Mixed forest':n<65?'Temperate grassland':n<82?'Wetland':'Temperate coast'};
+ if(lat>30)return {biome:'Dry subtropical',sub:n<45?'Mediterranean scrub':n<75?'Hot desert':'Xeric shrubland'};
+ if(lat>18)return {biome:'Subtropical',sub:n<40?'Dry woodland':n<70?'Savanna':'Seasonal forest'};
+ if(lat>8)return {biome:'Tropical',sub:n<48?'Tropical rainforest':n<75?'Tropical seasonal forest':'Tropical wetland'};
+ return {biome:'Equatorial',sub:n<55?'Humid rainforest':n<80?'Flooded forest':'Tropical grassland'};
+}
+function updateStatusBar(){
+ const hours=Math.floor(worldMinutes/60)%24,mins=worldMinutes%60;
+ $('worldClock').textContent=String(hours).padStart(2,'0')+':'+String(mins).padStart(2,'0');
+ const night=hours<6||hours>=19;$('dayNight').textContent=night?'Night':'Day';$('dayNight').style.color=night?'#a9b9f2':'#f3d58b';
+ const chosen=selected||settlements[0]||{id:'world',x:500,y:250},biome=classifyBiome(chosen);
+ const season=['Spring','Summer','Autumn','Winter'][Math.floor((worldMinutes/1440)%4)];
+ const wx=hash(seedText+'|weather|'+Math.floor(worldMinutes/180)+'|'+chosen.id)%100;
+ const weather=wx<42?'Clear':wx<60?'Cloudy':wx<73?'Rain':wx<83?'Windy':wx<92?'Fog':'Storm';
+ $('weatherValue').textContent=weather;$('weatherDetail').textContent=season+' · '+(weather==='Storm'?'severe conditions':weather==='Rain'?'wet conditions':'local procedural weather');
+ const pop=settlements.reduce((sum,s)=>sum+(s.population||({city:85000,town:18000,village:2200,port:12500,fort:6500}[s.type]||5000)),0);
+ $('populationValue').textContent=pop>=1000000?(pop/1000000).toFixed(2)+'M':pop>=1000?(pop/1000).toFixed(1)+'K':String(pop);
+ $('populationTrend').textContent=settlements.length+' settlements · illustrative';
+ $('resourceValue').textContent='Gold '+Math.round(realm.gold)+' · Food '+Math.round(realm.food);
+ $('resourceDetail').textContent='Militia '+Math.round(realm.military)+' · Stability '+Math.round(realm.stability)+'%';
+ $('biomeValue').textContent=biome.biome;$('subBiomeValue').textContent=biome.sub;
+ $('worldTurnValue').textContent=worldName+' · '+turn;$('worldSeason').textContent=season+' · 1 game hour / 3 real seconds';
+}
+function updateStats(){updateStatusBar();const counts={city:0,town:0,village:0,port:0,fort:0};settlements.forEach(s=>counts[s.type]=(counts[s.type]||0)+1);$('stats').innerHTML='<b>'+worldName+'</b><br>Seed: '+seedText+'<br>Continents / landmasses: '+geo.length+'<br>Regions: '+regions.length+'<br>Total settlements: '+settlements.length+'<br>Cities: '+counts.city+' · Towns: '+counts.town+'<br>Villages: '+counts.village+'<br>Ports: '+counts.port+' · Forts: '+counts.fort}
 function exportData(){const data={format:'WorldMapGeneratorOS/1.1',name:worldName,seed:seedText,projection:'equirectangular-style schematic',turn,realm,ownedIds:Array.from(ownedIds),continents:geo.map(g=>({name:g.name,outline:g.p})),regions,settlements};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=worldName.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'-world.json';a.click();URL.revokeObjectURL(a.href)}
 $('generate').addEventListener('click',newWorld);$('export').addEventListener('click',exportData);$('density').addEventListener('input',()=>{$('densityValue').textContent=$('density').value});$('terrain').addEventListener('change',draw);$('borderMode').addEventListener('change',draw);['showRoads','showBuildings','showCityLabels'].forEach(id=>$(id).addEventListener('change',draw));
 $('addSettlements').addEventListener('click',()=>{genSettlements(Math.max(1,Math.min(500,+$('extraCount').value||25)),$('kind').value);updateStats();draw()});
@@ -188,6 +224,7 @@ async function loadEarthGeometry(){
 loadEarthGeometry();
 setInterval(()=>{worldMinutes=(worldMinutes+20)%(1440*4);updateStatusBar();if($('terrain').value==='weather')draw()},3000);
 
+setInterval(()=>{worldMinutes=(worldMinutes+20)%(1440*4);updateStatusBar();if($('terrain').value==='weather')draw()},3000);
 })();
 </script>
 </body></html>
