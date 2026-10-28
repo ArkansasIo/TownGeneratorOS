@@ -3,6 +3,8 @@ use serde::Serialize;
 use sqlx::{mysql::MySqlPoolOptions, MySqlPool};
 use std::{env, net::SocketAddr};
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
+mod physics;
+use physics::{OrbitRequest, SurfaceGravityRequest};
 
 #[derive(Clone)]
 struct AppState { db: MySqlPool }
@@ -25,6 +27,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app = Router::new()
         .route("/health", get(health))
         .route("/api/v1/universe", get(universe_info))
+        .route("/api/v1/physics/orbit", axum::routing::post(orbit_calculation))
+        .route("/api/v1/physics/surface-gravity", axum::routing::post(surface_gravity_calculation))
         .route("/api/v1/session", get(ws_upgrade))
         .with_state(state)
         .layer(CorsLayer::permissive())
@@ -71,5 +75,19 @@ async fn handle_socket(mut socket: WebSocket) {
             Message::Close(_) => break,
             _ => {}
         }
+    }
+}
+
+async fn orbit_calculation(Json(input): Json<OrbitRequest>) -> impl IntoResponse {
+    match physics::calculate_orbit(&input) {
+        Ok(result) => (StatusCode::OK, Json(serde_json::json!({"model":"two-body Keplerian approximation","units":"SI","result":result}))),
+        Err(message) => (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error":message}))),
+    }
+}
+
+async fn surface_gravity_calculation(Json(input): Json<SurfaceGravityRequest>) -> impl IntoResponse {
+    match physics::surface_gravity(&input) {
+        Ok(result) => (StatusCode::OK, Json(serde_json::json!({"model":"Newtonian spherical-body approximation","units":"SI","result":result}))),
+        Err(message) => (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error":message}))),
     }
 }
