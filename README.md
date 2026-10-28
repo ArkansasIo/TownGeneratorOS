@@ -6,12 +6,14 @@ A procedural Earth-style world-map and settlement-generation workspace based on 
 
 - **GitHub Pages homepage:** once deployment succeeds, use the URL shown in [Settings → Pages](https://github.com/ArkansasIo/TownGeneratorOS/settings/pages).
 - **Source page:** [world-map.html](./world-map.html)
+- **3D procedural galaxy:** [galaxy.html](./galaxy.html) — four-quadrant galaxy, seeded star systems, orbiting planets, and spherical planet inspection.
 - **World map data:** [Natural Earth land geometry](./Assets/world-land.geojson) and [country boundaries](./Assets/world-countries.geojson).
 
 ## World map features
 
 - Earth-style continent silhouettes loaded from GeoJSON.
 - Pan and zoom controls for the 2D canvas, including wheel zoom and drag navigation.
+- 3D procedural galaxy preview with quadrant navigation, seeded star systems, orbiting planets, and spherical planet views.
 - Seed field for repeatable procedural settlement generation.
 - Generate cities, towns, villages, ports, and fortified settlements.
 - Add settlements manually by double-clicking land; select, rename, or delete markers.
@@ -23,7 +25,7 @@ The current editor is a prototype: continent outlines use a simplified equirecta
 
 ## GitHub Pages deployment
 
-The workflow [Deploy World Map Generator OS to GitHub Pages](https://github.com/ArkansasIo/TownGeneratorOS/actions/workflows/pages.yml) publishes `index.html`, `world-map.html`, and the GeoJSON assets. It runs on relevant pushes to `master` or can be started manually from **Actions → Deploy World Map Generator OS to GitHub Pages → Run workflow**.
+The workflow [Deploy World Map Generator OS to GitHub Pages](https://github.com/ArkansasIo/TownGeneratorOS/actions/workflows/pages.yml) publishes `index.html`, `world-map.html`, `galaxy.html`, and the GeoJSON assets. It runs on relevant pushes to `master` or can be started manually from **Actions → Deploy World Map Generator OS to GitHub Pages → Run workflow**.
 
 If this is the first deployment, open [Settings → Pages](https://github.com/ArkansasIo/TownGeneratorOS/settings/pages) and choose **GitHub Actions** as the source. The deployment is not considered live until the workflow's deploy job succeeds.
 
@@ -41,3 +43,8 @@ haxelib run lime build html5 -release
 ## Attribution and licensing
 
 This repository is a fork based on [Watabou's Medieval Fantasy City Generator](https://watabou.itch.io/medieval-fantasy-city-generator/). Natural Earth geometry is included for geographic outlines; consult the dataset's terms and the repository [LICENSE](./LICENSE) before redistributing. Preserve applicable upstream attribution.
+
+
+## Universe backend prototype
+
+The `server/` folder contains an initial Rust/Axum service scaffold and MySQL schema for universe metadata, star systems, celestial bodies, settlements, players, sessions, and events. See [Multiplayer Architecture](./docs/MULTIPLAYER_ARCHITECTURE.md). The WebSocket is currently a transport prototype only; authenticated multiplayer gameplay is not yet implemented. GitHub Pages hosts the static client, not the Rust/MySQL service.
