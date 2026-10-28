@@ -1,0 +1,41 @@
+name: Rust backend checks
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - 'server/**'
+      - '.github/workflows/rust-ci.yml'
+  pull_request:
+    paths:
+      - 'server/**'
+      - '.github/workflows/rust-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rust:
+    name: Format, test and compile
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install stable Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: server
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Run unit tests
+        run: cargo test --locked
+      - name: Compile all targets
+        run: cargo check --locked --all-targets
