@@ -6,6 +6,7 @@ on:
     paths:
       - 'index.html'
       - 'world-map.html'
+      - 'galaxy.html'
       - 'Assets/**'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
@@ -37,9 +38,11 @@ jobs:
           mkdir -p _site/Assets
           cp index.html _site/index.html
           cp world-map.html _site/world-map.html
+          cp galaxy.html _site/galaxy.html
           cp Assets/world-land.geojson _site/Assets/world-land.geojson
           cp Assets/world-countries.geojson _site/Assets/world-countries.geojson
           test -s _site/index.html
+          test -s _site/galaxy.html
           test -s _site/Assets/world-land.geojson
           test -s _site/Assets/world-countries.geojson
 
