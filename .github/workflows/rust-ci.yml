@@ -36,6 +36,6 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
       - name: Run unit tests
-        run: cargo test --locked
+        run: cargo test
       - name: Compile all targets
-        run: cargo check --locked --all-targets
+        run: cargo check --all-targets
