@@ -1,0 +1,44 @@
+{
+  "schema_version": "planetary-data-sources.v1",
+  "policy": "Use measured datasets only for the matching physical body. Never copy Earth's coastline or geology onto another planet. Preserve source identifiers, map projection, units, epochs, resolution, uncertainty, and license/attribution.",
+  "sources": [
+    {
+      "id": "natural-earth-10m",
+      "body": "Earth",
+      "themes": ["coastlines", "land", "rivers", "lakes", "countries", "cities", "roads"],
+      "url": "https://www.naturalearthdata.com/downloads/",
+      "use": "Global-scale basemap and low/medium zoom. Not street-level or city-block resolution.",
+      "license": "Public domain per Natural Earth terms",
+      "status": "source_catalogued_not_yet_ingested"
+    },
+    {
+      "id": "openstreetmap",
+      "body": "Earth",
+      "themes": ["detailed roads", "buildings", "settlements", "landuse", "waterways"],
+      "url": "https://www.openstreetmap.org/",
+      "use": "High-detail modern geography; historical medieval roads must be sourced separately or simulated.",
+      "license": "ODbL; attribution and database obligations apply",
+      "status": "source_catalogued_not_yet_ingested"
+    },
+    {
+      "id": "usgs-astrogeology",
+      "body": "Moon, Mars, Mercury and other mapped planetary bodies",
+      "themes": ["geologic maps", "craters", "landforms", "topography", "GIS map layers"],
+      "url": "https://www.usgs.gov/special-topics/planetary-geologic-mapping",
+      "catalog_url": "https://astrogeology.usgs.gov/search",
+      "use": "Choose a body-specific dataset; do not assume all layers cover all bodies.",
+      "license": "Check each product's stated terms and attribution",
+      "status": "source_catalogued_not_yet_ingested"
+    },
+    {
+      "id": "nasa-planetary-data-system",
+      "body": "Solar System bodies",
+      "themes": ["mission imagery", "topography", "cartography", "geoscience", "ancillary data"],
+      "url": "https://pds.nasa.gov/",
+      "catalog_url": "https://planetary.data.nasa.gov/find-data",
+      "use": "Mission/product-specific source for calibrated scientific data and metadata.",
+      "license": "Check product-specific terms",
+      "status": "source_catalogued_not_yet_ingested"
+    }
+  ]
+}
