@@ -6,7 +6,7 @@ A procedural Earth-style world-map and settlement-generation workspace based on 
 
 - **GitHub Pages homepage:** once deployment succeeds, use the URL shown in [Settings → Pages](https://github.com/ArkansasIo/TownGeneratorOS/settings/pages).
 - **Source page:** [world-map.html](./world-map.html)
-- **3D procedural galaxy:** [galaxy.html](./galaxy.html) — four-quadrant galaxy, seeded star systems, orbiting planets, and spherical planet inspection.
+- **3D procedural galaxy:** [galaxy.html](./galaxy.html) — four-quadrant galaxy, seeded star systems, orbiting planets, and spherical planet inspection.\n- **Planetary atlas:** [planetary-atlas.html](./planetary-atlas.html) — body catalog, source provenance, ingestion status, and API-backed procedural surface previews.
 - **World map data:** [Natural Earth land geometry](./Assets/world-land.geojson) and [country boundaries](./Assets/world-countries.geojson).
 
 ## World map features
@@ -25,7 +25,7 @@ The current editor is a prototype: continent outlines use a simplified equirecta
 
 ## GitHub Pages deployment
 
-The workflow [Deploy World Map Generator OS to GitHub Pages](https://github.com/ArkansasIo/TownGeneratorOS/actions/workflows/pages.yml) publishes `index.html`, `world-map.html`, `galaxy.html`, and the GeoJSON assets. It runs on relevant pushes to `master` or can be started manually from **Actions → Deploy World Map Generator OS to GitHub Pages → Run workflow**.
+The workflow [Deploy World Map Generator OS to GitHub Pages](https://github.com/ArkansasIo/TownGeneratorOS/actions/workflows/pages.yml) publishes `index.html`, `world-map.html`, `galaxy.html`, `planetary-atlas.html`, and the GeoJSON assets. It runs on relevant pushes to `master` or can be started manually from **Actions → Deploy World Map Generator OS to GitHub Pages → Run workflow**.
 
 If this is the first deployment, open [Settings → Pages](https://github.com/ArkansasIo/TownGeneratorOS/settings/pages) and choose **GitHub Actions** as the source. The deployment is not considered live until the workflow's deploy job succeeds.
 
@@ -60,7 +60,7 @@ The `server/` folder contains an initial Rust/Axum service scaffold and MySQL sc
 ### Rust API prototypes
 
 - `POST /api/v1/planets/generate` — seeded planet profile, class, atmosphere, hydrology, biosphere, continents and biomes.
-- `POST /api/v1/planets/surface-tile` — bounded deterministic terrain/climate/biome samples for a procedural tile.
+- `POST /api/v1/planets/surface-tile` — bounded deterministic terrain/climate/biome samples for a procedural tile.\n- `GET /api/v1/planets/catalog` — body-specific data source catalog.\n- `GET /api/v1/planets/sources` — catalog of available data source families.\n- `GET /api/v1/planets/data-status` — explicit ingested-versus-catalogued status.
 - `POST /api/v1/world/roads` — deterministic road graph from supplied settlement sites.
 - `POST /api/v1/physics/orbit` and `POST /api/v1/physics/surface-gravity` — simplified scientific calculations using SI units.
 
@@ -75,7 +75,7 @@ Example surface request:
 }
 ```
 
-These endpoints are prototypes. Procedural surface output is not measured geology; real planetary map products have been catalogued but still require dataset-specific ingestion, attribution, validation and tiling. Earth coastline data is now restricted to the configured homeworld in the 3D client so it is not reused as the geography of every generated planet.
+These endpoints are prototypes. Procedural surface output is not measured geology; real planetary map products have been catalogued but still require dataset-specific ingestion, attribution, validation and tiling. See [the provenance schema](./docs/PLANETARY_DATA_PROVENANCE_SCHEMA.md) and [geospatial tools](./tools/geo/README.md). Raster staging is supported by `tools/geo/import_planetary_raster.py`; it requires GDAL and does not itself certify scientific validity. Earth coastline data is now restricted to the configured homeworld in the 3D client so it is not reused as the geography of every generated planet.
 
 ### Backend checks
 
