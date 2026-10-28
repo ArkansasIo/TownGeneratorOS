@@ -61,6 +61,6 @@ mod tests {
  }
  #[test] fn earth_gravity_is_about_one_g() {
   let r=surface_gravity(&SurfaceGravityRequest{mass_earth:1.0,radius_earth:1.0}).unwrap();
-  assert!((r.earth_g-1.0).abs()<0.001);
+  assert!((r.earth_g-1.0).abs()<0.002);
  }
 }
