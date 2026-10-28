@@ -89,3 +89,15 @@ Planet profile endpoint: `POST /api/v1/planets/generate`. Road graph endpoint: `
 - High-resolution terrain, city buildings and historical medieval routes are not complete merely because a texture or road graph exists.
 - Surface sampling is procedural and should be exposed as such in UI and API metadata.
 - Production needs tile caching, authentication for edits, rate limiting, and a production CORS allowlist.
+
+
+## Reproducible Earth-data import
+
+The repository includes `tools/geo/import_natural_earth.py`, which downloads selected Natural Earth 1:10m archives, converts them to GeoJSON with GDAL's `ogr2ogr`, and writes a per-layer manifest with checksums.
+
+```sh
+python tools/geo/import_natural_earth.py --output-dir ./generated-data/natural-earth
+python tools/geo/validate_geojson.py ./generated-data/natural-earth/land.geojson
+```
+
+Install GDAL/ogr2ogr first. Downloaded archives and generated datasets are excluded from Git to avoid committing large derived files. Review the generated manifest and the current source terms before distributing the output. This importer covers Earth layers only; planetary body products need a separate body-aware importer because formats, map projections, resolutions and licenses differ by product.
