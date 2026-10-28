@@ -17,7 +17,7 @@ pub struct PlanetProfile {
     pub biomes: Vec<BiomeRegion>,
     pub provenance: String,
 }
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all="snake_case")]
 pub enum PlanetClass { Terrestrial, OceanWorld, Desert, IceWorld, Volcanic, GasGiant, IceGiant, DwarfPlanet, BarrenRock, ArtificialHabitat, Unknown }
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -28,7 +28,7 @@ pub struct AtmosphereGas { pub gas: String, pub percentage: f64 }
 pub struct HydrologyProfile { pub surface_liquid_water_percent: f64, pub ocean_coverage_percent: f64, pub has_rivers: bool, pub has_lakes: bool, pub has_subsurface_ocean: bool }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BiologyProfile { pub biosphere: BiosphereClass, pub estimated_species_count: u64, pub complexity_index: f64, pub dominant_domains: Vec<String>, pub notes: String }
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all="snake_case")]
 pub enum BiosphereClass { Sterile, PrebioticChemistry, Microbial, SimpleMulticellular, ComplexMulticellular, Technological, Unknown }
 #[derive(Debug, Clone, Serialize, Deserialize)]
