@@ -1,0 +1,80 @@
+{
+  "schema_version": "planetary-body-catalog.v1",
+  "note": "This catalog identifies source families to investigate. It does not claim these datasets have been downloaded, normalized, or integrated.",
+  "bodies": [
+    {
+      "id": "sol-earth",
+      "name": "Earth",
+      "body_type": "terrestrial",
+      "geography_sources": ["Natural Earth 1:10m physical/cultural vectors", "OpenStreetMap"],
+      "geology_sources": ["national geological survey datasets", "USGS and partner geological data"],
+      "primary_catalogs": ["https://www.naturalearthdata.com/downloads/", "https://www.openstreetmap.org/"],
+      "map_status": "existing_project_geojson_plus_source_catalogue",
+      "license_policy": "Natural Earth public domain; OpenStreetMap ODbL attribution and database obligations"
+    },
+    {
+      "id": "sol-moon",
+      "name": "Moon",
+      "body_type": "rocky_satellite",
+      "geography_sources": ["USGS Astrogeology", "NASA Planetary Data System"],
+      "geology_sources": ["USGS lunar geologic maps", "NASA mission cartography and elevation products"],
+      "primary_catalogs": ["https://astrogeology.usgs.gov/search", "https://pds.nasa.gov/"],
+      "map_status": "catalogued_not_ingested"
+    },
+    {
+      "id": "sol-mars",
+      "name": "Mars",
+      "body_type": "terrestrial",
+      "geography_sources": ["USGS Astrogeology", "NASA Planetary Data System"],
+      "geology_sources": ["USGS Mars geologic maps", "NASA mission topography and image products"],
+      "primary_catalogs": ["https://astrogeology.usgs.gov/search", "https://pds.nasa.gov/"],
+      "map_status": "catalogued_not_ingested"
+    },
+    {
+      "id": "sol-mercury",
+      "name": "Mercury",
+      "body_type": "terrestrial",
+      "geography_sources": ["USGS Astrogeology", "NASA Planetary Data System"],
+      "geology_sources": ["USGS planetary geologic maps", "NASA MESSENGER mission products"],
+      "primary_catalogs": ["https://astrogeology.usgs.gov/search", "https://pds.nasa.gov/"],
+      "map_status": "catalogued_not_ingested"
+    },
+    {
+      "id": "sol-venus",
+      "name": "Venus",
+      "body_type": "terrestrial",
+      "geography_sources": ["USGS Astrogeology", "NASA Planetary Data System"],
+      "geology_sources": ["USGS planetary geologic maps", "NASA Magellan mission products"],
+      "primary_catalogs": ["https://astrogeology.usgs.gov/search", "https://pds.nasa.gov/"],
+      "map_status": "catalogued_not_ingested"
+    },
+    {
+      "id": "sol-ceres",
+      "name": "Ceres",
+      "body_type": "dwarf_planet",
+      "geography_sources": ["NASA Planetary Data System", "USGS Astrogeology catalog"],
+      "geology_sources": ["NASA Dawn mission products where available"],
+      "primary_catalogs": ["https://pds.nasa.gov/", "https://astrogeology.usgs.gov/search"],
+      "map_status": "catalogued_not_ingested"
+    },
+    {
+      "id": "sol-titan",
+      "name": "Titan",
+      "body_type": "icy_satellite",
+      "geography_sources": ["NASA Planetary Data System", "USGS Astrogeology catalog"],
+      "geology_sources": ["NASA Cassini mission radar and surface mapping products where available"],
+      "primary_catalogs": ["https://pds.nasa.gov/", "https://astrogeology.usgs.gov/search"],
+      "map_status": "catalogued_not_ingested"
+    },
+    {
+      "id": "procedural-exoplanet",
+      "name": "Procedural exoplanet template",
+      "body_type": "generated",
+      "geography_sources": ["seeded procedural terrain generator"],
+      "geology_sources": ["seeded fictional tectonic/volcanic model"],
+      "primary_catalogs": [],
+      "map_status": "procedural_preview",
+      "provenance": "procedural_estimate"
+    }
+  ]
+}
