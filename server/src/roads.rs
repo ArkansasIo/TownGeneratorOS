@@ -47,7 +47,7 @@ pub fn generate_road_network(seed:u64, mut sites:Vec<Site>, max_local_distance:f
             }
         }
         if let Some((i,j,d,_))=best {
-            roads.push(RoadEdge{from:sites[i].id.clone(),to:sites[j].id.clone(),class:if matches!(sites[i].kind,SiteKind::Capital)||matches!(sites[j].kind,SiteKind::Capital){RoadClass::Royal}else{RoadClass::Regional},distance:d});
+            roads.push(RoadEdge{from:sites[i].id.clone(),to:sites[j].id.clone(),class:if matches!(&sites[i].kind,SiteKind::Capital)||matches!(&sites[j].kind,SiteKind::Capital){RoadClass::Royal}else{RoadClass::Regional},distance:d});
             connected.insert(sites[j].id.clone());
         } else { break; }
     }
