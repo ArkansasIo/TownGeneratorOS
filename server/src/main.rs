@@ -6,6 +6,7 @@ use tower_http::{cors::CorsLayer, trace::TraceLayer};
 mod physics;
 mod roads;
 mod planet;
+mod surface;
 use physics::{OrbitRequest, SurfaceGravityRequest};
 
 #[derive(Clone)]
@@ -33,6 +34,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/physics/surface-gravity", axum::routing::post(surface_gravity_calculation))
         .route("/api/v1/world/roads", axum::routing::post(generate_roads))
         .route("/api/v1/planets/generate", axum::routing::post(generate_planet))
+        .route("/api/v1/planets/surface-tile", axum::routing::post(generate_surface_tile))
         .route("/api/v1/session", get(ws_upgrade))
         .with_state(state)
         .layer(CorsLayer::permissive())
@@ -112,4 +114,12 @@ async fn generate_planet(Json(input): Json<GeneratePlanetRequest>) -> impl IntoR
     }
     let profile = planet::generate_planet(input.seed, input.id, input.name, input.class);
     (StatusCode::OK, Json(serde_json::json!({"model":"seeded procedural planetary profile v1","warning":"Generated values are fictional game estimates, not measured astronomical data.","planet":profile})))
+}
+
+
+async fn generate_surface_tile(Json(input): Json<surface::SurfaceTileRequest>) -> impl IntoResponse {
+    match surface::generate_surface_tile(input) {
+        Ok(tile) => (StatusCode::OK, Json(serde_json::json!({"tile":tile}))),
+        Err(message) => (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error":message}))),
+    }
 }
