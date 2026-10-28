@@ -186,6 +186,8 @@ async function loadEarthGeometry(){
   }
 }
 loadEarthGeometry();
+setInterval(()=>{worldMinutes=(worldMinutes+20)%(1440*4);updateStatusBar();if($('terrain').value==='weather')draw()},3000);
+
 })();
 </script>
 </body></html>
