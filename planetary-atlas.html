@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Planetary Atlas · World Map Generator OS</title>
+<style>
+:root{color-scheme:dark;--bg:#060b14;--panel:#111b2b;--line:#2c405b;--ink:#e8f1ff;--muted:#9caec8;--accent:#83d7e8;--warn:#ffcf85}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,sans-serif}
+header{padding:16px 20px;background:#0b1422;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+h1{font-size:20px;margin:0}h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin:0 0 12px}
+main{display:grid;grid-template-columns:minmax(250px,330px) minmax(0,1fr);gap:14px;padding:14px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:14px;min-width:0}
+label{display:block;color:var(--muted);font-size:12px;margin:10px 0 5px}
+input,select,button{width:100%;border:1px solid #3a5272;border-radius:5px;background:#081322;color:var(--ink);padding:10px;font:inherit}
+button{cursor:pointer;background:#17354c;font-weight:650;margin-top:9px}button:hover{background:#24506a}
+.small{font-size:12px;color:var(--muted)}.status{padding:9px;border:1px solid var(--line);border-radius:6px;margin:8px 0;overflow-wrap:anywhere}
+#map{width:100%;height:auto;aspect-ratio:2/1;display:block;background:#07111f;border:1px solid var(--line);border-radius:7px;image-rendering:auto}
+#bodyList{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-top:12px}
+.body{border:1px solid var(--line);border-radius:7px;padding:10px;background:#0b1524}.body strong{display:block}.tag{font-size:11px;color:var(--warn)}
+#statusLine{margin-top:8px;color:var(--muted);overflow-wrap:anywhere}
+@media(max-width:780px){main{grid-template-columns:1fr;padding:9px}.panel{padding:12px}header{padding:13px}}
+</style>
+</head>
+<body>
+<header><div><h1>PLANETARY ATLAS</h1><div class="small">Body-specific geography · geology provenance · seeded terrain preview</div></div><a href="./galaxy.html" style="color:var(--accent)">Back to galaxy</a></header>
+<main>
+<aside class="panel">
+<h2>Atlas connection</h2>
+<label for="api">Backend base URL</label><input id="api" value="http://127.0.0.1:8080" spellcheck="false">
+<div class="small">The Rust API must be running and reachable. GitHub Pages serves this interface but does not host the Rust/MySQL backend.</div>
+<button id="loadCatalog">Load body catalog and source status</button>
+<label for="body">Celestial body</label><select id="body"><option value="procedural-exoplanet">Procedural exoplanet</option><option value="sol-earth">Earth</option><option value="sol-moon">Moon</option><option value="sol-mars">Mars</option><option value="sol-mercury">Mercury</option><option value="sol-venus">Venus</option><option value="sol-ceres">Ceres</option><option value="sol-titan">Titan</option></select>
+<label for="class">Terrain model</label><select id="class"><option value="terrestrial">Terrestrial</option><option value="ocean_world">Ocean world</option><option value="desert">Desert</option><option value="ice_world">Ice world</option><option value="volcanic">Volcanic</option><option value="barren_rock">Barren rock</option></select>
+<label for="seed">World seed</label><input id="seed" type="number" value="20261028">
+<div class="row"><label>Width<input id="width" type="number" min="16" max="256" value="128"></label><label>Height<input id="height" type="number" min="8" max="128" value="64"></label></div>
+<button id="generate">Generate surface tile</button>
+<div id="statusLine" role="status" aria-live="polite">Waiting for backend.</div>
+</aside>
+<section class="panel">
+<h2 id="mapTitle">Procedural surface preview</h2>
+<canvas id="map" width="128" height="64" aria-label="Generated planetary surface map"></canvas>
+<div id="legend" class="small">Colors show generated elevation and biome classes. They are not measured remote-sensing data.</div>
+<div id="bodyList"></div>
+<h2 style="margin-top:18px">Selected body provenance</h2>
+<div id="bodyDetails" class="status small">Load the catalog to view source and ingestion status.</div>
+</section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const base=()=> $('api').value.trim().replace(/\/+$/,'');
+const setStatus=t=>{$('statusLine').textContent=t};
+const safeText=v=>String(v??'Not supplied');
+function showCatalog(catalog,status){
+ const bodies=catalog.bodies||[];
+ $('bodyList').replaceChildren();
+ for(const body of bodies){
+  const card=document.createElement('div');card.className='body';
+  const title=document.createElement('strong');title.textContent=body.name;
+  const kind=document.createElement('div');kind.className='small';kind.textContent=body.body_type||'celestial body';
+  const state=document.createElement('div');state.className='tag';state.textContent=body.map_status||'status not specified';
+  card.append(title,kind,state);
+  card.addEventListener('click',()=>{$('body').value=body.id;showBody(body);});
+  $('bodyList').append(card);
+ }
+ const current=bodies.find(b=>b.id===$('body').value)||bodies[0];
+ if(current)showBody(current);
+ $('legend').textContent='Source catalog loaded. Catalog status is not proof that datasets have been ingested.';
+}
+function showBody(body){
+ $('bodyDetails').textContent=[
+ 'Body: '+safeText(body.name),
+ 'Status: '+safeText(body.map_status),
+ 'Geography sources: '+safeText((body.geography_sources||[]).join('; ')),
+ 'Geology sources: '+safeText((body.geology_sources||[]).join('; ')),
+ 'Catalogs: '+safeText((body.primary_catalogs||[]).join('; ')),
+ 'License policy: '+safeText(body.license_policy),
+ 'Important: a catalog entry does not mean a source product has been downloaded or validated.'
+ ].join('\n');
+ $('bodyDetails').style.whiteSpace='pre-wrap';
+ $('mapTitle').textContent=body.name+' · surface preview';
+}
+async function loadCatalog(){
+ try{
+  setStatus('Loading catalog…');
+  const [catalogRes,statusRes]=await Promise.all([
+   fetch(base()+'/api/v1/planets/catalog'),fetch(base()+'/api/v1/planets/data-status')
+  ]);
+  if(!catalogRes.ok||!statusRes.ok)throw new Error('HTTP '+catalogRes.status+' / '+statusRes.status);
+  const catalog=await catalogRes.json();const status=await statusRes.json();
+  showCatalog(catalog,status);setStatus('Catalog loaded. '+safeText(status.raw_dataset_ingestion)+'.');
+ }catch(e){setStatus('Could not load backend: '+e.message+'. Check API URL, server status, and CORS.');}
+}
+function colorFor(s){
+ if(s.elevation_m<0)return [Math.max(4,10+s.elevation_m/500),Math.max(30,55+s.elevation_m/150),Math.max(65,105+s.elevation_m/100)];
+ if(s.biome==='ice_tundra'||s.biome==='polar_barren')return [190,211,222];
+ if(s.biome==='volcanic_terrain')return [130,66,51];
+ if(s.biome==='arid_desert')return [190,151,83];
+ if(s.biome==='temperate_forest')return [48,117,78];
+ return [118,139,91];
+}
+async function generate(){
+ const width=Math.max(16,Math.min(256,Number($('width').value)||128));
+ const height=Math.max(8,Math.min(128,Number($('height').value)||64));
+ const seed=Number($('seed').value)||1;
+ try{
+  setStatus('Requesting procedural surface tile…');
+  const response=await fetch(base()+'/api/v1/planets/surface-tile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({seed,width,height,class:$('class').value})});
+  const payload=await response.json();if(!response.ok)throw new Error(payload.error||('HTTP '+response.status));
+  const tile=payload.tile;const canvas=$('map');canvas.width=tile.width;canvas.height=tile.height;
+  const ctx=canvas.getContext('2d');const image=ctx.createImageData(tile.width,tile.height);
+  tile.samples.forEach((s,i)=>{const c=colorFor(s);image.data[i*4]=c[0];image.data[i*4+1]=c[1];image.data[i*4+2]=c[2];image.data[i*4+3]=255;});
+  ctx.putImageData(image,0,0);
+  $('legend').textContent='Provenance: '+tile.provenance+' · seed '+tile.seed+' · '+tile.width+'×'+tile.height+' samples. Elevation/climate/biomes are procedural estimates.';
+  $('mapTitle').textContent=$('body').selectedOptions[0].text+' · generated terrain';
+  setStatus('Surface generated. This is a procedural estimate, not measured planetary data.');
+ }catch(e){setStatus('Surface request failed: '+e.message+'. The backend needs to be running.');}
+}
+$('loadCatalog').addEventListener('click',loadCatalog);
+$('generate').addEventListener('click',generate);
+$('body').addEventListener('change',()=>{const cards=[...$('bodyList').children];const bodyId=$('body').value;const catalogCard=cards.find(c=>c.querySelector('strong')?.textContent===$('body').selectedOptions[0].text);if(catalogCard)catalogCard.click();});
+loadCatalog();
+</script>
+</body>
+</html>
