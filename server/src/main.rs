@@ -7,6 +7,7 @@ mod physics;
 mod roads;
 mod planet;
 mod surface;
+mod planetary_data;
 use physics::{OrbitRequest, SurfaceGravityRequest};
 
 #[derive(Clone)]
@@ -35,6 +36,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/world/roads", axum::routing::post(generate_roads))
         .route("/api/v1/planets/generate", axum::routing::post(generate_planet))
         .route("/api/v1/planets/surface-tile", axum::routing::post(generate_surface_tile))
+        .route("/api/v1/planets/catalog", get(planetary_data::body_catalog))
+        .route("/api/v1/planets/sources", get(planetary_data::source_catalog))
+        .route("/api/v1/planets/data-status", get(planetary_data::data_status))
         .route("/api/v1/session", get(ws_upgrade))
         .with_state(state)
         .layer(CorsLayer::permissive())
