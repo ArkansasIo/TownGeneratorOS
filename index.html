@@ -72,6 +72,14 @@ input[type=range]{padding:0;accent-color:var(--accent)}button{cursor:pointer;bac
 <button id="doAction" style="margin-top:8px">Execute action</button>
 <div id="turnLog" class="hint" style="margin-top:8px" aria-live="polite">Turn 1 begins. Select a settlement to issue an order.</div>
 </section>
+<section><h2>World simulation</h2>
+<div class="hint" id="simulationStatus" aria-live="polite">Agents and hazards are procedural game entities.</div>
+<div class="row" style="margin-top:8px"><button id="spawnLife">Spawn wildlife</button><button id="spawnThreat">Spawn monster</button></div>
+<div class="row" style="margin-top:8px"><button id="spawnPeople">Spawn people</button><button id="triggerHazard">Trigger hazard</button></div>
+<label for="simSpeed">Simulation speed</label><select id="simSpeed"><option value="1">1×</option><option value="2">2×</option><option value="4">4×</option></select>
+<button id="pauseSimulation" style="margin-top:8px">Pause simulation</button>
+<div id="eventLog" class="hint" aria-live="polite" style="margin-top:8px">World events will appear here.</div>
+</section>
 <section><h2>World index</h2><div id="stats">Generating world…</div></section>
 <section><h2>Workflow</h2><p class="hint">Select a settlement marker to inspect it. Zoom to 400% or more to reveal a deterministic procedural town layout around the selected settlement. Export saves the current world outline, region polygons, seed, and settlement records as JSON. This standalone module is a foundation for wiring the existing town generator into the full app.</p></section>
 </aside>
@@ -102,6 +110,52 @@ let zoom=1,panX=0,panY=0;
 let turn=1,realm={gold:1200,food:800,stability:65,military:120,trade:0};
 let worldMinutes=8*60;
 let ownedIds=new Set();
+let simulationPaused=false,simSpeed=1,simTick=0,simEntities=[],hazards=[],eventHistory=[];
+const species=[
+ {kind:'animal',name:'Red deer',glyph:'d',speed:1.1,biome:['Temperate','Boreal']},
+ {kind:'animal',name:'Grey wolf',glyph:'w',speed:1.5,biome:['Boreal','Temperate']},
+ {kind:'animal',name:'Brown bear',glyph:'b',speed:.8,biome:['Boreal','Temperate']},
+ {kind:'animal',name:'Wild horse',glyph:'h',speed:1.8,biome:['Temperate','Dry subtropical']},
+ {kind:'animal',name:'Arctic fox',glyph:'f',speed:1.2,biome:['Polar','Boreal']},
+ {kind:'animal',name:'Eagle',glyph:'e',speed:2.1,biome:['Temperate','Boreal','Dry subtropical']},
+ {kind:'monster',name:'Cave troll',glyph:'T',speed:.6,biome:['Boreal','Temperate']},
+ {kind:'monster',name:'Marsh hydra',glyph:'H',speed:.5,biome:['Tropical','Equatorial']},
+ {kind:'monster',name:'Ash drake',glyph:'D',speed:1.3,biome:['Dry subtropical','Subtropical']},
+ {kind:'monster',name:'Frost wraith',glyph:'W',speed:1.1,biome:['Polar','Boreal']}
+];
+const personRoles=['farmer','merchant','guard','scout','healer','builder','scholar','ranger'];
+function simLog(message){eventHistory.unshift('Tick '+simTick+': '+message);eventHistory=eventHistory.slice(0,5);$('eventLog').innerHTML=eventHistory.map(x=>'<div>'+x.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</div>').join('');$('simulationStatus').textContent=simEntities.length+' mobile agents · '+hazards.length+' active hazards · '+simTick+' simulation ticks';}
+function spawnEntity(kind){
+ const r=rng(hash(seedText+'|entity|'+(++serial)+'|'+simTick+'|'+kind));
+ const p=selected?{x:selected.x,y:selected.y}:randomLand(r);
+ let item;
+ if(kind==='person'){item={id:'AG-'+serial,kind,name:personRoles[Math.floor(r()*personRoles.length)],glyph:'●',x:p.x,y:p.y,target:null,speed:.5+r()*1.2,health:100,ai:'wander',faction:$('realmFaction').value}}
+ else{const pool=species.filter(s=>s.kind===kind),sp=pool[Math.floor(r()*pool.length)]||species[0];item={id:'AG-'+serial,kind,name:sp.name,glyph:sp.glyph,x:p.x,y:p.y,target:null,speed:sp.speed,health:100,ai:kind==='monster'?'territorial':'forage',faction:null}}
+ simEntities.push(item);simLog('Spawned '+item.name+' ('+item.kind+').');draw();
+}
+function spawnHazard(){
+ const r=rng(hash(seedText+'|hazard|'+(++serial)+'|'+simTick));
+ const p=selected?{x:selected.x,y:selected.y}:randomLand(r);
+ const kinds=[['wildfire','🔥'],['plague','☣'],['flood','≋'],['drought','☀'],['volcanic eruption','▲'],['blizzard','❄'],['locust swarm','✳']];
+ const k=kinds[Math.floor(r()*kinds.length)];
+ hazards.push({id:'HZ-'+serial,name:k[0],glyph:k[1],x:p.x,y:p.y,radius:12+r()*22,severity:1+Math.floor(r()*4),age:0,duration:8+Math.floor(r()*20)});
+ simLog('Hazard started: '+k[0]+'.');draw();
+}
+function tickAgents(){
+ simTick++;
+ const r=rng(hash(seedText+'|tick|'+simTick));
+ for(const a of simEntities){
+  if(!a.target||Math.hypot(a.target.x-a.x,a.target.y-a.y)<2||r()<.025){const t=randomLand(r);a.target={x:t.x,y:t.y}}
+  let dx=a.target.x-a.x,dy=a.target.y-a.y,d=Math.hypot(dx,dy)||1,step=a.speed*(a.kind==='monster'?.8:1)*(simSpeed);
+  if(d<step){a.x=a.target.x;a.y=a.target.y;a.target=null}else{a.x+=dx/d*step;a.y+=dy/d*step}
+  if(a.ai==='forage'&&r()<.02)a.health=Math.min(100,a.health+1);
+  if(a.kind==='monster'){const near=simEntities.find(b=>b.kind==='person'&&Math.hypot(b.x-a.x,b.y-a.y)<8);if(near){near.health-=5;if(near.health<=0){simEntities=simEntities.filter(b=>b!==near);simLog(a.name+' attacked a traveller.')}}}
+ }
+ hazards=hazards.filter(h=>{h.age++;if(h.age>=h.duration){simLog(h.name+' has subsided.');return false}
+  for(const a of simEntities){if(Math.hypot(a.x-h.x,a.y-h.y)<h.radius){a.health-=h.severity;if(a.health<=0){simLog(a.name+' lost to '+h.name+'.');simEntities=simEntities.filter(b=>b!==a)}}}return true});
+ if(simEntities.length||hazards.length)draw();
+ $('simulationStatus').textContent=simEntities.length+' mobile agents · '+hazards.length+' active hazards · '+simTick+' simulation ticks';
+}
 function setZoom(next,anchorX=null,anchorY=null){const rect=canvas.getBoundingClientRect();const cx=anchorX??rect.width/2,cy=anchorY??rect.height/2;const old=zoom;zoom=Math.max(1,Math.min(18,next));panX=cx-(cx-panX)*(zoom/old);panY=cy-(cy-panY)*(zoom/old);$('zoomLabel').textContent=Math.round(zoom*100)+'%';draw()}
 function hash(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
 function rng(seed){let a=seed>>>0;return()=>{a+=0x6D2B79F5;let t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296}}
@@ -190,6 +244,10 @@ function drawWorldDetail(w,h,sx,sy){
  }
  ctx.globalAlpha=1;
 }
+function drawSimulationEntities(w,h,sx,sy){
+ for(const z of hazards){const x=z.x*sx,y=z.y*sy;ctx.beginPath();ctx.arc(x,y,z.radius/Math.sqrt(zoom),0,Math.PI*2);ctx.fillStyle='rgba(215,91,63,.18)';ctx.fill();ctx.strokeStyle='#e47c59';ctx.lineWidth=1;ctx.stroke();ctx.font=Math.max(8,13/Math.sqrt(zoom))+'px system-ui';ctx.textAlign='center';ctx.fillText(z.glyph,x,y+4)}
+ for(const a of simEntities){const x=a.x*sx,y=a.y*sy;ctx.font=Math.max(8,12/Math.sqrt(zoom))+'px system-ui';ctx.textAlign='center';ctx.fillStyle=a.kind==='monster'?'#f0a6e8':a.kind==='person'?'#fff0c2':'#b5e4ba';ctx.fillText(a.glyph,x,y);if(zoom>=4){ctx.font=Math.max(6,9/Math.sqrt(zoom))+'px system-ui';ctx.fillText(a.name,x,y-8)}}
+}
 function draw(){updateStatusBar();const dpr=window.devicePixelRatio||1,rect=canvas.getBoundingClientRect();canvas.width=Math.round(rect.width*dpr);canvas.height=Math.round(rect.height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);const w=rect.width,h=rect.height;ctx.clearRect(0,0,w,h);
 ctx.fillStyle=$('terrain').value==='biomes'?'#102b32':'#0b2638';ctx.fillRect(0,0,w,h);
 ctx.save();ctx.translate(w/2+panX,h/2+panY);ctx.scale(zoom,zoom);ctx.translate(-w/2,-h/2);
@@ -202,6 +260,7 @@ if($('terrain').value!=='physical')regions.forEach((g,i)=>{if($('borderMode').va
 settlements.forEach(s=>{const x=s.x*sx,y=s.y*sy;const color=s.type==='city'?'#ffcf70':s.type==='town'?'#78d8c2':s.type==='village'?'#b8c9f2':'#f28b82';ctx.beginPath();ctx.arc(x,y,Math.max(1.4,(s.type==='city'?4.5:s.type==='town'?3.3:2.4)/Math.sqrt(zoom)),0,Math.PI*2);ctx.fillStyle=color;ctx.fill();ctx.strokeStyle='#08131d';ctx.lineWidth=1;ctx.stroke();if(s===selected){ctx.beginPath();ctx.arc(x,y,9,0,Math.PI*2);ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke()}});
 ctx.fillStyle='rgba(222,236,240,.75)';ctx.font='11px system-ui';ctx.textAlign='left';ctx.fillText(worldName+' · seed '+seedText,12,20);
 drawLocalCityDetail(w,h,sx,sy);
+drawSimulationEntities(w,h,sx,sy);
 ctx.restore();
 }
 function newWorld(){turn=1;realm={gold:1200,food:800,stability:65,military:120,trade:0};ownedIds=new Set();worldName=$('worldName').value.trim()||'Unnamed World';seedText=$('seed').value.trim()||'world-001';serial=0;selected=null;settlements=[];const r=rng(hash(seedText));generateRegions(r);const base=+$('density').value;genSettlements(Math.round(190*base/60),'all');$('detail').textContent='World regenerated. Select a settlement marker to inspect its details.';updateStats();draw()}
@@ -274,6 +333,14 @@ async function loadEarthGeometry(){
     draw();
   }
 }
+$('spawnLife').addEventListener('click',()=>spawnEntity('animal'));
+$('spawnThreat').addEventListener('click',()=>spawnEntity('monster'));
+$('spawnPeople').addEventListener('click',()=>spawnEntity('person'));
+$('triggerHazard').addEventListener('click',spawnHazard);
+$('simSpeed').addEventListener('change',()=>{simSpeed=+$('simSpeed').value||1});
+$('pauseSimulation').addEventListener('click',()=>{simulationPaused=!simulationPaused;$('pauseSimulation').textContent=simulationPaused?'Resume simulation':'Pause simulation';simLog(simulationPaused?'Simulation paused.':'Simulation resumed.')});
+setInterval(()=>{if(!simulationPaused)for(let i=0;i<simSpeed;i++)tickAgents()},1800);
+
 loadEarthGeometry();
 setInterval(()=>{worldMinutes=(worldMinutes+20)%(1440*4);updateStatusBar();if($('terrain').value==='weather')draw()},3000);
 
