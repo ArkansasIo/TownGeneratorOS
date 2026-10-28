@@ -48,3 +48,44 @@ This repository is a fork based on [Watabou's Medieval Fantasy City Generator](h
 ## Universe backend prototype
 
 The `server/` folder contains an initial Rust/Axum service scaffold and MySQL schema for universe metadata, star systems, celestial bodies, settlements, players, sessions, and events. See [Multiplayer Architecture](./docs/MULTIPLAYER_ARCHITECTURE.md). The WebSocket is currently a transport prototype only; authenticated multiplayer gameplay is not yet implemented. GitHub Pages hosts the static client, not the Rust/MySQL service.
+
+
+## Planetary geology and procedural surface pipeline
+
+- [Planetary data and map pipeline](./docs/PLANETARY_DATA_AND_MAP_PIPELINE.md) — source catalogue, provenance, zoom/LOD, historical roads and body-specific geology.
+- [Object inspector and detail menus](./docs/OBJECT_INSPECTOR_AND_DETAIL_MENUS.md) — detailed selection/right-click menu design for planets, settlements, roads, creatures and strategy objects.
+- [Planetary data source catalogue](./Assets/metadata/planetary-data-sources.json) — Natural Earth, OpenStreetMap, USGS Astrogeology and NASA PDS links with ingestion status.
+- [Engine status and roadmap](./docs/ENGINE_STATUS_AND_ROADMAP.md) — capabilities, limitations and deployment/security requirements.
+
+### Rust API prototypes
+
+- `POST /api/v1/planets/generate` — seeded planet profile, class, atmosphere, hydrology, biosphere, continents and biomes.
+- `POST /api/v1/planets/surface-tile` — bounded deterministic terrain/climate/biome samples for a procedural tile.
+- `POST /api/v1/world/roads` — deterministic road graph from supplied settlement sites.
+- `POST /api/v1/physics/orbit` and `POST /api/v1/physics/surface-gravity` — simplified scientific calculations using SI units.
+
+Example surface request:
+
+```json
+{
+  "seed": 12345,
+  "width": 128,
+  "height": 64,
+  "class": "terrestrial"
+}
+```
+
+These endpoints are prototypes. Procedural surface output is not measured geology; real planetary map products have been catalogued but still require dataset-specific ingestion, attribution, validation and tiling. Earth coastline data is now restricted to the configured homeworld in the 3D client so it is not reused as the geography of every generated planet.
+
+### Backend checks
+
+Run locally with Rust installed:
+
+```sh
+cd server
+cargo fmt --check
+cargo test
+cargo check
+```
+
+The API currently requires a configured MySQL database at runtime. The Rust API and database are not hosted by GitHub Pages.
