@@ -22,6 +22,8 @@ pub struct RoadEdge { pub from: String, pub to: String, pub class: RoadClass, pu
 pub enum RoadClass { Royal, Regional, Local }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RoadNetwork { pub seed: u64, pub sites: Vec<Site>, pub roads: Vec<RoadEdge> }
+#[derive(Debug, Clone, Deserialize)]
+pub struct RoadNetworkRequest { pub seed: u64, pub sites: Vec<Site>, pub max_local_distance: f64 }
 
 fn mix(mut x:u64)->u64 { x^=x>>30; x=x.wrapping_mul(0xbf58476d1ce4e5b9); x^=x>>27; x=x.wrapping_mul(0x94d049bb133111eb); x^(x>>31) }
 fn distance(a:&Site,b:&Site)->f64 { ((a.x-b.x).powi(2)+(a.y-b.y).powi(2)).sqrt() }
