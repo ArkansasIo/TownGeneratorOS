@@ -2,3 +2,10 @@
 *.iml
 /Export
 /.idea
+
+# Downloaded source datasets and generated map tiles (regenerate with tools/geo scripts)
+/generated-data/
+/Assets/source-cache/
+/Assets/generated-tiles/
+*.mbtiles
+*.pmtiles
