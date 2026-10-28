@@ -61,23 +61,7 @@ const continents=[
 {name:'Madagascar',pts:[[520,235],[525,247],[521,262],[516,251]]}
 ];
 // Map coordinate convention is x=longitude+180, y=90-latitude; simplified geographic silhouettes.
-const geo=[
-// deliberately traced generalized coastlines in normalized map coordinates (x 0..1000,y 0..500)
-{name:'North America',p:[[70,95],[95,66],[130,58],[163,72],[188,93],[213,113],[225,140],[204,157],[190,174],[178,201],[158,216],[146,248],[130,235],[119,209],[102,190],[89,162],[74,140]]},
-{name:'South America',p:[[202,230],[224,235],[239,253],[247,281],[239,314],[229,345],[218,378],[205,417],[192,449],[181,421],[174,390],[166,357],[160,326],[164,293],[176,264]]},
-{name:'Europe',p:[[443,112],[459,94],[482,94],[501,108],[495,125],[479,135],[463,128],[450,136],[438,124]]},
-{name:'Africa',p:[[449,143],[478,130],[507,144],[526,171],[521,205],[506,239],[490,276],[472,300],[459,282],[446,253],[437,218],[437,184]]},
-{name:'Asia',p:[[493,104],[523,76],[561,69],[598,77],[634,85],[668,82],[703,94],[738,95],[771,115],[796,143],[782,164],[758,169],[738,184],[714,183],[693,201],[672,195],[655,177],[633,172],[614,155],[595,146],[575,157],[554,142],[532,143],[514,129]]},
-{name:'India',p:[[583,157],[604,164],[619,184],[614,208],[602,226],[592,204]]},
-{name:'Southeast Asia',p:[[638,181],[657,186],[671,201],[688,209],[699,226],[684,232],[668,218],[652,203]]},
-{name:'Japan',p:[[750,146],[758,157],[755,173],[748,166]]},
-{name:'Australia',p:[[719,273],[744,257],[774,264],[795,282],[795,305],[777,326],[752,332],[730,320],[717,298]]},
-{name:'Greenland',p:[[285,44],[307,34],[329,45],[327,70],[309,87],[290,73]]},
-{name:'Madagascar',p:[[526,280],[532,296],[526,315],[521,299]]},
-{name:'United Kingdom',p:[[440,112],[444,105],[448,112],[445,121]]},
-{name:'Sri Lanka',p:[[606,228],[610,234],[607,239]]},
-{name:'New Zealand',p:[[829,340],[836,351],[831,365],[825,354]]}
-];
+let geo=[];
 let settlements=[],regions=[],selected=null,seedText='terra-001',worldName='Terra Nova',serial=0;
 function hash(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
 function rng(seed){let a=seed>>>0;return()=>{a+=0x6D2B79F5;let t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296}}
@@ -108,7 +92,31 @@ $('generate').addEventListener('click',newWorld);$('export').addEventListener('c
 $('addSettlements').addEventListener('click',()=>{genSettlements(Math.max(1,Math.min(500,+$('extraCount').value||25)),$('kind').value);updateStats();draw()});
 $('clearSettlements').addEventListener('click',()=>{settlements=[];selected=null;updateStats();draw();$('detail').textContent='Settlements cleared.'});
 canvas.addEventListener('click',e=>{const rect=canvas.getBoundingClientRect(),x=(e.clientX-rect.left)/rect.width*1000,y=(e.clientY-rect.top)/rect.height*500;selected=settlements.reduce((best,s)=>Math.hypot(s.x-x,s.y-y)<Math.hypot(best.x-x,best.y-y)?s:best,settlements[0]);if(selected&&Math.hypot(selected.x-x,selected.y-y)<18){$('detail').textContent=selected.name+' · '+selected.type+' · population '+selected.population.toLocaleString()+' · '+selected.region+' / '+selected.continent+' · '+selected.id}else{selected=null;$('detail').textContent='No settlement selected.'}draw()});
-window.addEventListener('resize',draw);newWorld();
+window.addEventListener('resize',draw);
+async function loadEarthGeometry(){
+  try {
+    const response = await fetch('./Assets/world-land.geojson');
+    if (!response.ok) throw new Error('HTTP '+response.status);
+    const fc = await response.json();
+    geo = [];
+    for (const feature of fc.features || []) {
+      const geom = feature.geometry;
+      if (!geom) continue;
+      const polygons = geom.type === 'Polygon' ? [geom.coordinates] : geom.type === 'MultiPolygon' ? geom.coordinates : [];
+      for (const polygon of polygons) {
+        const ring = polygon[0] || [];
+        const points = ring.map(([lon,lat]) => [((lon+180)/360)*1000, ((90-lat)/180)*500]);
+        if (points.length > 2) geo.push({name:feature.properties?.name || feature.properties?.featurecla || 'Land',p:points});
+      }
+    }
+    if (!geo.length) throw new Error('No land polygons found');
+    newWorld();
+  } catch (error) {
+    $('stats').textContent='Could not load Earth coastline data: '+error.message+'. Open through GitHub Pages or a local web server so the GeoJSON asset can be fetched.';
+    draw();
+  }
+}
+loadEarthGeometry();
 })();
 </script>
 </body></html>
