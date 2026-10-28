@@ -5,6 +5,7 @@ use std::{env, net::SocketAddr};
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 mod physics;
 mod roads;
+mod planet;
 use physics::{OrbitRequest, SurfaceGravityRequest};
 
 #[derive(Clone)]
@@ -31,6 +32,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/physics/orbit", axum::routing::post(orbit_calculation))
         .route("/api/v1/physics/surface-gravity", axum::routing::post(surface_gravity_calculation))
         .route("/api/v1/world/roads", axum::routing::post(generate_roads))
+        .route("/api/v1/planets/generate", axum::routing::post(generate_planet))
         .route("/api/v1/session", get(ws_upgrade))
         .with_state(state)
         .layer(CorsLayer::permissive())
@@ -99,4 +101,15 @@ async fn generate_roads(Json(input): Json<roads::RoadNetworkRequest>) -> impl In
         Ok(network) => (StatusCode::OK, Json(serde_json::json!({"algorithm":"deterministic_euclidean_backbone_v1","note":"Prototype graph only; terrain, rivers, walls, slope costs and pathfinding are not yet applied.","network":network}))),
         Err(message) => (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error":message}))),
     }
+}
+
+#[derive(serde::Deserialize)]
+struct GeneratePlanetRequest { seed: u64, id: String, name: String, class: planet::PlanetClass }
+
+async fn generate_planet(Json(input): Json<GeneratePlanetRequest>) -> impl IntoResponse {
+    if input.id.trim().is_empty() || input.name.trim().is_empty() {
+        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error":"id and name must not be empty"})));
+    }
+    let profile = planet::generate_planet(input.seed, input.id, input.name, input.class);
+    (StatusCode::OK, Json(serde_json::json!({"model":"seeded procedural planetary profile v1","warning":"Generated values are fictional game estimates, not measured astronomical data.","planet":profile})))
 }
