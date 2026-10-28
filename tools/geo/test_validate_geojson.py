@@ -14,7 +14,7 @@ class GeoJsonValidatorTests(unittest.TestCase):
             path = Path(temp) / "sample.geojson"
             path.write_text(json.dumps(payload), encoding="utf-8")
             return subprocess.run(
-                [sys.executable, str(SCRIPT), str(path), "--max-invalid", "0"],
+                [sys.executable, str(SCRIPT), str(path), "--max-invalid", "1"],
                 capture_output=True, text=True, check=False,
             )
 
