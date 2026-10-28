@@ -14,7 +14,7 @@ aside{padding:16px;border-right:1px solid var(--line);background:var(--panel);di
 section{border:1px solid var(--line);border-radius:8px;padding:12px}h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--accent);margin:0 0 10px}
 label{display:block;font-size:12px;color:var(--muted);margin:9px 0 4px}input,select,button{font:inherit;width:100%;border-radius:5px;border:1px solid #36566a;background:#0a1721;color:var(--ink);padding:8px}
 input[type=range]{padding:0;accent-color:var(--accent)}button{cursor:pointer;background:#173447;border-color:#42687a;font-weight:600}button:hover{background:#21485b}.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.check{display:flex;align-items:center;gap:8px}.check input{width:auto}
-#stats{color:var(--muted);font-size:12px;line-height:1.7}.mapwrap{padding:12px;min-width:0;display:flex;flex-direction:column;gap:8px}#map{width:100%;height:calc(100vh - 112px);min-height:440px;display:block;border:1px solid var(--line);border-radius:8px;background:#0b2638;touch-action:manipulation}
+#stats{color:var(--muted);font-size:12px;line-height:1.7}.maptools{display:flex;gap:6px;align-items:center}.maptools button{width:auto;min-width:42px;padding:6px 10px}.maptools span{color:var(--muted);font-size:12px;min-width:55px;text-align:center}.mapwrap{padding:12px;min-width:0;display:flex;flex-direction:column;gap:8px}#map{width:100%;height:calc(100vh - 112px);min-height:440px;display:block;border:1px solid var(--line);border-radius:8px;background:#0b2638;touch-action:manipulation}
 .legend{display:flex;gap:15px;flex-wrap:wrap;color:var(--muted);font-size:12px}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}.hint{color:var(--muted);font-size:12px}
 @media(max-width:780px){main{grid-template-columns:1fr}aside{border-right:0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}#map{height:65vh;min-height:360px}}
 </style>
@@ -40,7 +40,7 @@ input[type=range]{padding:0;accent-color:var(--accent)}button{cursor:pointer;bac
 <section><h2>World index</h2><div id="stats">Generating world…</div></section>
 <section><h2>Workflow</h2><p class="hint">Select a settlement marker to inspect it. Export saves the current world outline, region polygons, seed, and settlement records as JSON. This standalone module is a foundation for wiring the existing town generator into the full app.</p></section>
 </aside>
-<div class="mapwrap"><canvas id="map" aria-label="Interactive Earth-style world map"></canvas><div class="legend"><span><i class="dot" style="background:#ffcf70"></i>City</span><span><i class="dot" style="background:#78d8c2"></i>Town</span><span><i class="dot" style="background:#b8c9f2"></i>Village</span><span><i class="dot" style="background:#f28b82"></i>Port / Fort</span><span>Click a marker for details</span></div><div id="detail" class="hint">No settlement selected.</div></div>
+<div class="mapwrap"><div class="maptools"><button id="zoomOut" aria-label="Zoom out">−</button><span id="zoomLabel">100%</span><button id="zoomIn" aria-label="Zoom in">+</button><button id="zoomReset">Reset view</button><span class="hint">Mouse wheel / trackpad to zoom</span></div><canvas id="map" aria-label="Interactive Earth-style world map"></canvas><div class="legend"><span><i class="dot" style="background:#ffcf70"></i>City</span><span><i class="dot" style="background:#78d8c2"></i>Town</span><span><i class="dot" style="background:#b8c9f2"></i>Village</span><span><i class="dot" style="background:#f28b82"></i>Port / Fort</span><span>Click a marker for details</span></div><div id="detail" class="hint">No settlement selected.</div></div>
 </main>
 <script>
 (() => {
@@ -62,7 +62,7 @@ const continents=[
 ];
 // Map coordinate convention is x=longitude+180, y=90-latitude; simplified geographic silhouettes.
 let geo=[];
-let settlements=[],regions=[],selected=null,seedText='terra-001',worldName='Terra Nova',serial=0;
+let settlements=[],regions=[],selected=null,seedText='terra-001',worldName='Terra Nova',serial=0;\nlet zoom=1,panX=0,panY=0;\nfunction setZoom(next,anchorX=null,anchorY=null){const rect=canvas.getBoundingClientRect();const cx=anchorX??rect.width/2,cy=anchorY??rect.height/2;const old=zoom;zoom=Math.max(1,Math.min(6,next));panX=cx-(cx-panX)*(zoom/old);panY=cy-(cy-panY)*(zoom/old);$('zoomLabel').textContent=Math.round(zoom*100)+'%';draw()}
 function hash(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
 function rng(seed){let a=seed>>>0;return()=>{a+=0x6D2B79F5;let t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296}}
 function polygonPath(points){ctx.beginPath();points.forEach((p,i)=>{const x=p[0]/1000*canvas.width,y=p[1]/500*canvas.height;i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.closePath()}
@@ -91,7 +91,7 @@ function exportData(){const data={format:'WorldMapGeneratorOS/1.0',name:worldNam
 $('generate').addEventListener('click',newWorld);$('export').addEventListener('click',exportData);$('density').addEventListener('input',()=>{$('densityValue').textContent=$('density').value});$('terrain').addEventListener('change',draw);$('borderMode').addEventListener('change',draw);
 $('addSettlements').addEventListener('click',()=>{genSettlements(Math.max(1,Math.min(500,+$('extraCount').value||25)),$('kind').value);updateStats();draw()});
 $('clearSettlements').addEventListener('click',()=>{settlements=[];selected=null;updateStats();draw();$('detail').textContent='Settlements cleared.'});
-canvas.addEventListener('click',e=>{const rect=canvas.getBoundingClientRect(),x=(e.clientX-rect.left)/rect.width*1000,y=(e.clientY-rect.top)/rect.height*500;selected=settlements.reduce((best,s)=>Math.hypot(s.x-x,s.y-y)<Math.hypot(best.x-x,best.y-y)?s:best,settlements[0]);if(selected&&Math.hypot(selected.x-x,selected.y-y)<18){$('detail').textContent=selected.name+' · '+selected.type+' · population '+selected.population.toLocaleString()+' · '+selected.region+' / '+selected.continent+' · '+selected.id}else{selected=null;$('detail').textContent='No settlement selected.'}draw()});
+canvas.addEventListener('click',e=>{const rect=canvas.getBoundingClientRect();const px=(e.clientX-rect.left-rect.width/2-panX)/zoom+rect.width/2,py=(e.clientY-rect.top-rect.height/2-panY)/zoom+rect.height/2;const x=px/rect.width*1000,y=py/rect.height*500;selected=settlements.reduce((best,s)=>Math.hypot(s.x-x,s.y-y)<Math.hypot(best.x-x,best.y-y)?s:best,settlements[0]);if(selected&&Math.hypot(selected.x-x,selected.y-y)<18){$('detail').textContent=selected.name+' · '+selected.type+' · population '+selected.population.toLocaleString()+' · '+selected.region+' / '+selected.continent+' · '+selected.id}else{selected=null;$('detail').textContent='No settlement selected.'}draw()});
 window.addEventListener('resize',draw);
 async function loadEarthGeometry(){
   try {
