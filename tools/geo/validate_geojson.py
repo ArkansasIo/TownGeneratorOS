@@ -32,7 +32,7 @@ def coordinates_in_geometry(geometry: dict[str, Any]):
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("file", type=Path)
-    parser.add_argument("--max-invalid", type=int, default=0)
+    parser.add_argument("--max-invalid", type=int, default=5)
     args = parser.parse_args()
     try:
         data = json.loads(args.file.read_text(encoding="utf-8"))
@@ -52,7 +52,7 @@ def main() -> int:
             count += 1
             lon, lat = float(coord[0]), float(coord[1])
             if not math.isfinite(lon) or not math.isfinite(lat) or not -180 <= lon <= 180 or not -90 <= lat <= 90:
-                if len(invalid) < args.max_invalid + 1:
+                if len(invalid) < args.max_invalid:
                     invalid.append({"feature": fi, "coordinate": coord[:2]})
                 continue
             min_lon, max_lon = min(min_lon, lon), max(max_lon, lon)
@@ -63,7 +63,7 @@ def main() -> int:
         "feature_count": len(data["features"]),
         "coordinate_count": count,
         "bounds_lon_lat": None if count == 0 else [min_lon, min_lat, max_lon, max_lat],
-        "invalid_coordinate_examples": invalid[:args.max_invalid],
+        "invalid_coordinate_examples": invalid,
         "note": "Structural check only; verify CRS, source, epoch, units, geometry validity and license separately."
     }
     print(json.dumps(report, indent=2))
