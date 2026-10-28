@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>World Map Generator OS</title>
+<style>
+:root{color-scheme:dark;--bg:#08131d;--panel:#101f2c;--line:#29475a;--ink:#e4edf3;--muted:#91a8b8;--accent:#72d0c1;--land:#c7b88c;--sea:#102e43}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}
+header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 20px;border-bottom:1px solid var(--line);background:#0b1925;flex-wrap:wrap}
+h1{font-size:19px;margin:0;letter-spacing:.04em}header p{margin:3px 0 0;color:var(--muted);font-size:12px}
+main{display:grid;grid-template-columns:270px minmax(0,1fr);min-height:calc(100vh - 66px)}
+aside{padding:16px;border-right:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;gap:14px}
+section{border:1px solid var(--line);border-radius:8px;padding:12px}h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--accent);margin:0 0 10px}
+label{display:block;font-size:12px;color:var(--muted);margin:9px 0 4px}input,select,button{font:inherit;width:100%;border-radius:5px;border:1px solid #36566a;background:#0a1721;color:var(--ink);padding:8px}
+input[type=range]{padding:0;accent-color:var(--accent)}button{cursor:pointer;background:#173447;border-color:#42687a;font-weight:600}button:hover{background:#21485b}.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.check{display:flex;align-items:center;gap:8px}.check input{width:auto}
+#stats{color:var(--muted);font-size:12px;line-height:1.7}.maptools{display:flex;gap:6px;align-items:center}.maptools button{width:auto;min-width:42px;padding:6px 10px}.maptools span{color:var(--muted);font-size:12px;min-width:55px;text-align:center}.mapwrap{padding:12px;min-width:0;display:flex;flex-direction:column;gap:8px}#map{width:100%;height:calc(100vh - 112px);min-height:440px;display:block;border:1px solid var(--line);border-radius:8px;background:#0b2638;touch-action:manipulation}
+.legend{display:flex;gap:15px;flex-wrap:wrap;color:var(--muted);font-size:12px}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}.hint{color:var(--muted);font-size:12px}
+@media(max-width:780px){main{grid-template-columns:1fr}aside{border-right:0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}#map{height:65vh;min-height:360px}}
+</style>
+</head>
+<body>
+<header><div><h1>WORLD MAP GENERATOR OS</h1><p>Earth-style continents · regional borders · procedural settlements</p></div><div class="hint">Prototype module · deterministic seed-based generation</div></header>
+<main>
+<aside>
+<section><h2>World setup</h2>
+<label for="worldName">World name</label><input id="worldName" value="Terra Nova" maxlength="48">
+<label for="seed">World seed</label><input id="seed" value="terra-001" maxlength="64">
+<label for="density">Settlement density <span id="densityValue">60</span>%</label><input id="density" type="range" min="10" max="100" value="60">
+<label for="borderMode">Political borders</label><select id="borderMode"><option value="countries">Countries + provinces</option><option value="countriesOnly">Countries only</option><option value="none">No political borders</option></select>
+<label for="terrain">Map overlay</label><select id="terrain"><option value="political">Political regions</option><option value="biomes">Biomes</option><option value="physical">Physical geography</option></select>
+<div class="row" style="margin-top:12px"><button id="generate">Generate world</button><button id="export">Export JSON</button></div>
+</section>
+<section><h2>Settlement generator</h2>
+<label for="kind">Settlement type</label><select id="kind"><option value="all">Cities and towns</option><option value="city">Major cities</option><option value="town">Towns</option><option value="village">Villages</option><option value="port">Ports</option><option value="fort">Fortified settlements</option></select>
+<label for="extraCount">Additional settlements</label><input id="extraCount" type="number" min="1" max="500" value="25">
+<button id="addSettlements" style="margin-top:10px">Generate settlements</button>
+<button id="clearSettlements" style="margin-top:8px">Clear settlements</button>
+</section>
+<section><h2>Map editor</h2>
+<p class="hint">Double-click land to place the selected settlement type. Select a marker to edit or remove it.</p>
+<div class="row"><button id="renameSelected">Rename selected</button><button id="deleteSelected">Delete selected</button></div>
+<label for="importFile">Load world JSON</label><input id="importFile" type="file" accept=".json,application/json">
+</section>
+<section><h2>World index</h2><div id="stats">Generating world…</div></section>
+<section><h2>Workflow</h2><p class="hint">Select a settlement marker to inspect it. Export saves the current world outline, region polygons, seed, and settlement records as JSON. This standalone module is a foundation for wiring the existing town generator into the full app.</p></section>
+</aside>
+<div class="mapwrap"><div class="maptools"><button id="zoomOut" aria-label="Zoom out">−</button><span id="zoomLabel">100%</span><button id="zoomIn" aria-label="Zoom in">+</button><button id="zoomReset">Reset view</button><span class="hint">Mouse wheel / trackpad to zoom</span></div><canvas id="map" aria-label="Interactive Earth-style world map"></canvas><div class="legend"><span><i class="dot" style="background:#ffcf70"></i>City</span><span><i class="dot" style="background:#78d8c2"></i>Town</span><span><i class="dot" style="background:#b8c9f2"></i>Village</span><span><i class="dot" style="background:#f28b82"></i>Port / Fort</span><span>Click a marker for details</span></div><div id="detail" class="hint">No settlement selected.</div></div>
+</main>
+<script>
+(() => {
+const canvas=document.getElementById('map'),ctx=canvas.getContext('2d');
+const $=id=>document.getElementById(id);
+const W=1000,H=500;
+const continents=[
+{name:'North America',pts:[[35,65],[28,78],[21,88],[16,105],[12,120],[15,135],[22,148],[23,164],[30,177],[34,195],[43,207],[49,197],[55,182],[62,171],[67,153],[75,143],[72,128],[65,119],[61,101],[53,88],[45,75]]},
+{name:'South America',pts:[[176,198],[190,203],[202,215],[210,233],[207,252],[201,271],[196,294],[187,319],[181,345],[173,367],[166,350],[163,329],[157,308],[151,285],[149,260],[154,238],[160,219]]},
+{name:'Europe',pts:[[455,84],[472,76],[490,81],[502,91],[498,103],[485,111],[475,104],[464,110],[453,101]]},
+{name:'Africa',pts:[[455,124],[477,116],[502,123],[520,141],[518,165],[508,188],[495,215],[480,243],[467,232],[456,210],[448,188],[441,164],[444,143]]},
+{name:'Asia',pts:[[501,80],[522,63],[554,57],[586,62],[615,70],[649,67],[680,78],[714,76],[744,89],[770,104],[786,124],[773,141],[751,143],[733,156],[714,154],[700,171],[678,167],[664,151],[642,147],[622,135],[606,123],[586,128],[572,117],[552,120],[536,109],[518,107]]},
+{name:'India',pts:[[584,133],[603,139],[616,156],[611,177],[600,192],[591,174],[583,155]]},
+{name:'Southeast Asia',pts:[[636,156],[654,162],[665,176],[680,184],[689,199],[676,204],[662,192],[649,181]]},
+{name:'Japan',pts:[[738,126],[746,135],[744,148],[737,143]]},
+{name:'Australia',pts:[[718,230],[742,218],[767,223],[786,237],[789,257],[775,272],[754,278],[733,269],[718,253]]},
+{name:'Greenland',pts:[[282,35],[303,28],[322,37],[319,56],[304,69],[287,60]]},
+{name:'Madagascar',pts:[[520,235],[525,247],[521,262],[516,251]]}
+];
+// Map coordinate convention is x=longitude+180, y=90-latitude; simplified geographic silhouettes.
+let geo=[];
+let settlements=[],regions=[],selected=null,seedText='terra-001',worldName='Terra Nova',serial=0;\nlet zoom=1,panX=0,panY=0;\nfunction setZoom(next,anchorX=null,anchorY=null){const rect=canvas.getBoundingClientRect();const cx=anchorX??rect.width/2,cy=anchorY??rect.height/2;const old=zoom;zoom=Math.max(1,Math.min(6,next));panX=cx-(cx-panX)*(zoom/old);panY=cy-(cy-panY)*(zoom/old);$('zoomLabel').textContent=Math.round(zoom*100)+'%';draw()}
+function hash(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+function rng(seed){let a=seed>>>0;return()=>{a+=0x6D2B79F5;let t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296}}
+function polygonPath(points){ctx.beginPath();points.forEach((p,i)=>{const x=p[0]/1000*canvas.width,y=p[1]/500*canvas.height;i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.closePath()}
+function pointInPoly(x,y,p){let c=false;for(let i=0,j=p.length-1;i<p.length;j=i++){const a=p[i],b=p[j];if(((a[1]>y)!=(b[1]>y))&&(x<(b[0]-a[0])*(y-a[1])/(b[1]-a[1])+a[0]))c=!c}return c}
+function onLand(x,y){return geo.some(g=>pointInPoly(x,y,g.p))}
+function randomLand(r){for(let n=0;n<12000;n++){let x=20+r()*960,y=35+r()*420;if(onLand(x,y))return{x,y}}return{x:470,y:180}}
+function generateRegions(r){regions=[];const names=['Northreach','Westmark','High Kingdom','Sun Coast','Green March','Eastern Reach','Silver Plains','Crownlands','Southlands','Free Provinces','Amber Coast','Stone March'];for(let i=0;i<names.length;i++){const p=randomLand(r);regions.push({name:names[i],x:p.x,y:p.y,continent:geo.find(g=>pointInPoly(p.x,p.y,g.p))?.name||'Unknown'})}}
+const syllA=['Ael','Ar','Bel','Cor','Dar','Eld','Fen','Gal','Har','Ith','Kel','Lor','Mor','Nor','Or','Pel','Quel','Rav','Syl','Tor','Val','Wen'];
+const syllB=['bar','den','dor','fall','gard','haven','mere','mont','moor','port','reach','stead','vale','wick','wyn','ford','crest','hold'];
+function nameFor(r){return syllA[Math.floor(r()*syllA.length)]+syllB[Math.floor(r()*syllB.length)]}
+function addSettlement(x,y,type,r){serial++;const region=regions.reduce((best,g)=>Math.hypot(g.x-x,g.y-y)<Math.hypot(best.x-x,best.y-y)?g:best,regions[0]);settlements.push({id:'SET-'+String(serial).padStart(4,'0'),name:nameFor(r),type,x,y,population:type==='city'?Math.floor(50000+r()*950000):type==='town'?Math.floor(2500+r()*45000):type==='port'?Math.floor(7000+r()*150000):type==='fort'?Math.floor(500+r()*12000):Math.floor(100+r()*2200),region:region?.name||'Unassigned',continent:region?.continent||'Unknown',seed:seedText})}
+function genSettlements(count,filter){const r=rng(hash(seedText+'|settlements|'+serial+'|'+count));const density=+$('density').value/100;const desired=Math.max(1,Math.round(count*density));for(let i=0;i<desired;i++){const p=randomLand(r);let type;if(filter!=='all')type=filter;else{const v=r();type=v<.08?'city':v<.48?'town':v<.83?'village':v<.93?'port':'fort'}addSettlement(p.x,p.y,type,r)}}
+function draw(){const dpr=window.devicePixelRatio||1,rect=canvas.getBoundingClientRect();canvas.width=Math.round(rect.width*dpr);canvas.height=Math.round(rect.height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);const w=rect.width,h=rect.height;ctx.clearRect(0,0,w,h);
+ctx.fillStyle=$('terrain').value==='biomes'?'#102b32':'#0b2638';ctx.fillRect(0,0,w,h);
+ctx.save();ctx.translate(w/2+panX,h/2+panY);ctx.scale(zoom,zoom);ctx.translate(-w/2,-h/2);
+// latitude/longitude graticule
+ctx.strokeStyle='rgba(143,190,207,.15)';ctx.lineWidth=1;for(let x=0;x<=w;x+=w/12){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke()}for(let y=0;y<=h;y+=h/6){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}
+const sx=w/1000,sy=h/500;
+geo.forEach((g,idx)=>{ctx.beginPath();g.p.forEach((p,i)=>i?ctx.lineTo(p[0]*sx,p[1]*sy):ctx.moveTo(p[0]*sx,p[1]*sy));ctx.closePath();ctx.fillStyle=$('terrain').value==='biomes'?['#6f9a72','#799b62','#b1aa7d','#8eaa70','#799b62'][idx%5]:'#c7b88c';ctx.fill();ctx.strokeStyle='#e3d5aa';ctx.lineWidth=1.3;ctx.stroke()});
+if($('terrain').value!=='physical')regions.forEach((g,i)=>{if($('borderMode').value==='none')return;const x=g.x*sx,y=g.y*sy;ctx.beginPath();ctx.arc(x,y,Math.max(18,w*.035),0,Math.PI*2);ctx.strokeStyle=$('borderMode').value==='countriesOnly'?'rgba(244,220,155,.6)':'rgba(238,208,146,.38)';ctx.setLineDash($('borderMode').value==='countriesOnly'?[]:[4,4]);ctx.lineWidth=1;ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='rgba(8,19,29,.72)';ctx.font='10px system-ui';ctx.textAlign='center';ctx.fillText(g.name,x,y-7)});
+settlements.forEach(s=>{const x=s.x*sx,y=s.y*sy;const color=s.type==='city'?'#ffcf70':s.type==='town'?'#78d8c2':s.type==='village'?'#b8c9f2':'#f28b82';ctx.beginPath();ctx.arc(x,y,s.type==='city'?4.5:s.type==='town'?3.3:2.4,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();ctx.strokeStyle='#08131d';ctx.lineWidth=1;ctx.stroke();if(s===selected){ctx.beginPath();ctx.arc(x,y,9,0,Math.PI*2);ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke()}});
+ctx.fillStyle='rgba(222,236,240,.75)';ctx.font='11px system-ui';ctx.textAlign='left';ctx.fillText(worldName+' · seed '+seedText,12,20);
+ctx.restore();
+}
+function newWorld(){worldName=$('worldName').value.trim()||'Unnamed World';seedText=$('seed').value.trim()||'world-001';serial=0;selected=null;settlements=[];const r=rng(hash(seedText));generateRegions(r);const base=+$('density').value;genSettlements(Math.round(190*base/60),'all');$('detail').textContent='World regenerated. Select a settlement marker to inspect its details.';updateStats();draw()}
+function updateStats(){const counts={city:0,town:0,village:0,port:0,fort:0};settlements.forEach(s=>counts[s.type]=(counts[s.type]||0)+1);$('stats').innerHTML='<b>'+worldName+'</b><br>Seed: '+seedText+'<br>Continents / landmasses: '+geo.length+'<br>Regions: '+regions.length+'<br>Total settlements: '+settlements.length+'<br>Cities: '+counts.city+' · Towns: '+counts.town+'<br>Villages: '+counts.village+'<br>Ports: '+counts.port+' · Forts: '+counts.fort}
+function exportData(){const data={format:'WorldMapGeneratorOS/1.0',name:worldName,seed:seedText,projection:'equirectangular-style schematic',continents:geo.map(g=>({name:g.name,outline:g.p})),regions,settlements};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=worldName.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'-world.json';a.click();URL.revokeObjectURL(a.href)}
+$('generate').addEventListener('click',newWorld);$('export').addEventListener('click',exportData);$('density').addEventListener('input',()=>{$('densityValue').textContent=$('density').value});$('terrain').addEventListener('change',draw);$('borderMode').addEventListener('change',draw);
+$('addSettlements').addEventListener('click',()=>{genSettlements(Math.max(1,Math.min(500,+$('extraCount').value||25)),$('kind').value);updateStats();draw()});
+$('clearSettlements').addEventListener('click',()=>{settlements=[];selected=null;updateStats();draw();$('detail').textContent='Settlements cleared.'});
+canvas.addEventListener('click',e=>{const rect=canvas.getBoundingClientRect();const px=(e.clientX-rect.left-rect.width/2-panX)/zoom+rect.width/2,py=(e.clientY-rect.top-rect.height/2-panY)/zoom+rect.height/2;const x=px/rect.width*1000,y=py/rect.height*500;selected=settlements.reduce((best,s)=>Math.hypot(s.x-x,s.y-y)<Math.hypot(best.x-x,best.y-y)?s:best,settlements[0]);if(selected&&Math.hypot(selected.x-x,selected.y-y)<18){$('detail').textContent=selected.name+' · '+selected.type+' · population '+selected.population.toLocaleString()+' · '+selected.region+' / '+selected.continent+' · '+selected.id}else{selected=null;$('detail').textContent='No settlement selected.'}draw()});
+canvas.addEventListener('dblclick',e=>{const rect=canvas.getBoundingClientRect();const px=(e.clientX-rect.left-rect.width/2-panX)/zoom+rect.width/2,py=(e.clientY-rect.top-rect.height/2-panY)/zoom+rect.height/2;const x=px/rect.width*1000,y=py/rect.height*500;if(!geo.some(g=>pointInPoly(x,y,g.p))){$('detail').textContent='Place settlements on land. Double-click a continent to add one.';return}const r=rng(hash(seedText+'|manual|'+serial+'|'+x.toFixed(2)+'|'+y.toFixed(2)));addSettlement(x,y,$('kind').value==='all'?'town':$('kind').value,r);selected=settlements[settlements.length-1];$('detail').textContent='Added '+selected.name+' · '+selected.type+' · '+selected.region;updateStats();draw()});
+$('renameSelected').addEventListener('click',()=>{if(!selected){$('detail').textContent='Select a settlement first.';return}const name=prompt('New settlement name:',selected.name);if(name&&name.trim()){selected.name=name.trim().slice(0,80);$('detail').textContent='Renamed settlement to '+selected.name;draw()}});
+$('deleteSelected').addEventListener('click',()=>{if(!selected){$('detail').textContent='Select a settlement first.';return}const name=selected.name;settlements=settlements.filter(s=>s!==selected);selected=null;$('detail').textContent='Deleted '+name;updateStats();draw()});
+$('importFile').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;try{const data=JSON.parse(await file.text());if(!Array.isArray(data.settlements))throw new Error('Missing settlements array');if(Array.isArray(data.continents)&&data.continents.length){const imported=data.continents.filter(g=>Array.isArray(g.outline)&&g.outline.length>2).map(g=>({name:g.name||'Land',p:g.outline}));if(imported.length)geo=imported}settlements=data.settlements.filter(s=>Number.isFinite(s.x)&&Number.isFinite(s.y)&&typeof s.name==='string');regions=Array.isArray(data.regions)?data.regions:regions;seedText=String(data.seed||'imported');worldName=String(data.name||'Imported World');$('seed').value=seedText;$('worldName').value=worldName;serial=settlements.reduce((m,s)=>Math.max(m,Number(String(s.id||'').replace('SET-',''))||0),0);selected=null;updateStats();draw();$('detail').textContent='Imported '+settlements.length+' settlements.'}catch(err){$('detail').textContent='Could not import world: '+err.message}finally{e.target.value=''}});
+window.addEventListener('resize',draw);
+$('zoomIn').addEventListener('click',()=>setZoom(zoom*1.25));$('zoomOut').addEventListener('click',()=>setZoom(zoom/1.25));$('zoomReset').addEventListener('click',()=>{zoom=1;panX=0;panY=0;$('zoomLabel').textContent='100%';draw()});
+canvas.addEventListener('wheel',e=>{e.preventDefault();const rect=canvas.getBoundingClientRect();setZoom(zoom*(e.deltaY<0?1.12:1/1.12),e.clientX-rect.left,e.clientY-rect.top)},{passive:false});
+let dragging=false,lastX=0,lastY=0;canvas.addEventListener('pointerdown',e=>{if(e.button!==0)return;dragging=true;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture(e.pointerId)});canvas.addEventListener('pointermove',e=>{if(!dragging)return;panX+=e.clientX-lastX;panY+=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;draw()});canvas.addEventListener('pointerup',()=>{dragging=false});canvas.addEventListener('pointercancel',()=>{dragging=false});
+async function loadEarthGeometry(){
+  try {
+    const response = await fetch('./Assets/world-land.geojson');
+    if (!response.ok) throw new Error('HTTP '+response.status);
+    const fc = await response.json();
+    geo = [];
+    for (const feature of fc.features || []) {
+      const geom = feature.geometry;
+      if (!geom) continue;
+      const polygons = geom.type === 'Polygon' ? [geom.coordinates] : geom.type === 'MultiPolygon' ? geom.coordinates : [];
+      for (const polygon of polygons) {
+        const ring = polygon[0] || [];
+        const points = ring.map(([lon,lat]) => [((lon+180)/360)*1000, ((90-lat)/180)*500]);
+        if (points.length > 2) geo.push({name:feature.properties?.name || feature.properties?.featurecla || 'Land',p:points});
+      }
+    }
+    if (!geo.length) throw new Error('No land polygons found');
+    newWorld();
+  } catch (error) {
+    $('stats').textContent='Could not load Earth coastline data: '+error.message+'. Open through GitHub Pages or a local web server so the GeoJSON asset can be fetched.';
+    draw();
+  }
+}
+loadEarthGeometry();
+})();
+</script>
+</body></html>
