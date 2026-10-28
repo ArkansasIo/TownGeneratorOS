@@ -1,0 +1,35 @@
+name: Geospatial data checks
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - 'tools/geo/**'
+      - 'Assets/*.geojson'
+      - '.github/workflows/geo-ci.yml'
+  pull_request:
+    paths:
+      - 'tools/geo/**'
+      - 'Assets/*.geojson'
+      - '.github/workflows/geo-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run geospatial unit tests
+        run: python -m unittest discover -s tools/geo -p 'test_*.py' -v
+      - name: Validate bundled Earth land geometry
+        run: python tools/geo/validate_geojson.py Assets/world-land.geojson
+      - name: Validate bundled country boundaries
+        run: python tools/geo/validate_geojson.py Assets/world-countries.geojson
